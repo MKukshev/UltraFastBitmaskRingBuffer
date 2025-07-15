@@ -146,8 +146,6 @@ class BitmaskRingBufferTest {
         assertNotNull(task2);
         assertNotNull(task3);
         
-        // Помечаем все занятые объекты для обновления
-        pool.markAllForUpdate();
         
         // Проверяем, что все объекты помечены
         assertTrue(task1.needsUpdate());

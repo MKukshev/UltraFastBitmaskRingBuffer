@@ -132,9 +132,7 @@ public class BitmaskRingBufferBenchmark {
             Task task = pool.getFreeObject();
             bh.consume(task);
         }
-        
-        // Измеряем пометку для обновления
-        pool.markAllForUpdate();
+
         
         // Возвращаем объекты
         List<Task> occupied = pool.getOccupiedObjects();

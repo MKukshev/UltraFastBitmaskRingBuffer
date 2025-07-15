@@ -76,6 +76,10 @@ public class OffHeapBenchmark {
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
                 
+                // Benchmark classic version (ConcurrentLinkedQueue + ConcurrentHashMap)
+                benchmarkVersion("Classic", poolSize, threadCount, 
+                    () -> new BitmaskRingBufferClassic<>(() -> new ProcessTask("Task"), poolSize/2, poolSize, 1000));
+                
                 System.out.println();
             }
         }
@@ -185,6 +189,8 @@ public class OffHeapBenchmark {
             return ((BitmaskRingBufferUltraStack<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferClassic) {
+            return ((BitmaskRingBufferClassic<Object>) pool).acquire();
         }
         return null;
     }
@@ -211,6 +217,8 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraStack<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferClassic) {
+            ((BitmaskRingBufferClassic<Object>) pool).release(obj);
         }
     }
     
