@@ -17,7 +17,9 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class OffHeapBenchmark {
     
-    private static final int[] POOL_SIZES = {1000, 5000, 10000, 50000};
+    // Размеры пулов для тестирования
+    private static final int[] POOL_SIZES = {1000, 5000, 10000, 50000, 100000};
+    // Количество потоков для тестирования
     private static final int[] THREAD_COUNTS = {1, 4, 8, 12};
     private static final int OPERATIONS_PER_THREAD = 10000;
     private static final int WARMUP_ITERATIONS = 3;

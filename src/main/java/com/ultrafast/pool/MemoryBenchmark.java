@@ -1,152 +1,138 @@
 package com.ultrafast.pool;
 
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.openjdk.jol.info.ClassLayout;
+import org.openjdk.jol.info.GraphLayout;
+
 /**
  * Бенчмарк для сравнения потребления памяти между различными реализациями пулов объектов
+ * с использованием JOL (Java Object Layout) для точного измерения размеров объектов
  * 
  * Сравнивает:
  * - BitmaskRingBufferClassic (ConcurrentLinkedQueue + ConcurrentHashMap)
  * - BitmaskRingBufferUltraVarHandle (оптимизированная версия с VarHandle)
  * 
  * Измеряет:
- * - Потребление памяти при создании пула
- * - Потребление памяти при заполнении пула объектами
- * - Потребление памяти при активном использовании
- * - Размер пула в байтах на объект
+ * - Точный размер объектов через JOL
+ * - Размер пула и его компонентов
+ * - Overhead пула на объект
  */
 public class MemoryBenchmark {
     
-    private static final int[] POOL_SIZES = {50000, 100000, 500000, 1000000};
+    // Размеры пулов для тестирования
+    private static final int[] POOL_SIZES = {1, 10, 100, 1000, 10000, 50000, 100000, 500000, 1000000};
     private static final int OPERATIONS_PER_TEST = 10000;
     private static final int WARMUP_ITERATIONS = 3;
     private static final int BENCHMARK_ITERATIONS = 5;
     private static final int PAYLOAD_SIZE = 1024; // 1 КБ на объект
     
     public static void main(String[] args) {
-        System.out.println("=== Memory Usage Benchmark ===");
+        System.out.println("=== Memory Usage Benchmark with JOL ===");
         System.out.println("Pool sizes: " + java.util.Arrays.toString(POOL_SIZES));
         System.out.println("Operations per test: " + OPERATIONS_PER_TEST);
         System.out.println("Warmup iterations: " + WARMUP_ITERATIONS);
         System.out.println("Benchmark iterations: " + BENCHMARK_ITERATIONS);
         System.out.println();
         
+        // Анализируем размер одного HeavyTask объекта
+        HeavyTask sampleTask = new HeavyTask(0, "Sample", PAYLOAD_SIZE, 42.0);
+        System.out.println("=== HeavyTask Object Layout ===");
+        System.out.println(ClassLayout.parseInstance(sampleTask).toPrintable());
+        System.out.println("Total size: " + GraphLayout.parseInstance(sampleTask).totalSize() + " bytes");
+        System.out.println();
+        
         for (int poolSize : POOL_SIZES) {
             System.out.printf("=== Pool Size: %d ===%n", poolSize);
-            System.out.printf("HeavyTask payload: %d bytes, total task size (примерно): %d bytes%n", PAYLOAD_SIZE, (PAYLOAD_SIZE + 64));
+            System.out.printf("HeavyTask payload: %d bytes, total task size: %d bytes%n", 
+                PAYLOAD_SIZE, GraphLayout.parseInstance(sampleTask).totalSize());
             
             // Тестируем Classic версию
-            benchmarkMemoryUsage("Classic", poolSize, () -> 
+            benchmarkMemoryUsageWithJOL("Classic", poolSize, () -> 
                 new BitmaskRingBufferClassic<>(() -> new HeavyTask(0, "Heavy", PAYLOAD_SIZE, 42.0), poolSize/2, poolSize, 1000));
             
             // Тестируем UltraVarHandle версию
-            benchmarkMemoryUsage("UltraVarHandle", poolSize, () -> 
+            benchmarkMemoryUsageWithJOL("UltraVarHandle", poolSize, () -> 
                 new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new HeavyTask(0, "Heavy", PAYLOAD_SIZE, 42.0)));
             
             System.out.println();
         }
     }
     
-    private static void benchmarkMemoryUsage(String versionName, int poolSize, PoolFactory poolFactory) {
+    private static void benchmarkMemoryUsageWithJOL(String versionName, int poolSize, PoolFactory poolFactory) {
         try {
             System.out.printf("--- %s ---%n", versionName);
             
-            // Измеряем базовое потребление памяти
-            long baseMemory = getUsedMemory();
-            
             // Создаем пул
             Object pool = poolFactory.create();
-            long afterCreation = getUsedMemory();
-            long creationMemory = afterCreation - baseMemory;
             
-            // Заполняем пул объектами
-            List<Object> borrowedObjects = new ArrayList<>();
-            for (int i = 0; i < poolSize; i++) {
+            // Анализируем размер пула без объектов
+            long poolSizeBytes = GraphLayout.parseInstance(pool).totalSize();
+            System.out.printf("Pool structure size: %d bytes (%6.2f bytes/object)%n", 
+                poolSizeBytes, (double) poolSizeBytes / poolSize);
+            
+            // Создаем список объектов для анализа
+            List<Object> objects = new ArrayList<>();
+            for (int i = 0; i < Math.min(poolSize, 1000); i++) { // Ограничиваем для больших пулов
                 Object obj = getObject(pool);
                 if (obj != null) {
-                    borrowedObjects.add(obj);
+                    objects.add(obj);
                 }
             }
-            long afterBorrow = getUsedMemory();
-            long borrowMemory = afterBorrow - afterCreation;
             
-            // Возвращаем объекты
-            for (Object obj : borrowedObjects) {
-                returnObject(pool, obj);
-            }
-            long afterReturn = getUsedMemory();
-            long returnMemory = afterReturn - afterBorrow;
-            
-            // Активное использование
-            long totalActiveMemory = 0;
-            for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
-                List<Object> tempObjects = new ArrayList<>();
+            long singleObjectSize = 0;
+            if (!objects.isEmpty()) {
+                // Анализируем размер объектов
+                long objectsSizeBytes = GraphLayout.parseInstance(objects).totalSize();
+                singleObjectSize = GraphLayout.parseInstance(objects.get(0)).totalSize();
                 
-                // Получаем объекты
-                for (int j = 0; j < OPERATIONS_PER_TEST; j++) {
-                    Object obj = getObject(pool);
-                    if (obj != null) {
-                        tempObjects.add(obj);
-                    }
-                }
+                System.out.printf("Sample objects size (%d objects): %d bytes%n", objects.size(), objectsSizeBytes);
+                System.out.printf("Single object size: %d bytes%n", singleObjectSize);
+                System.out.printf("Estimated total objects size: %d bytes%n", singleObjectSize * poolSize);
                 
-                long activeMemory = getUsedMemory();
-                totalActiveMemory += activeMemory;
-                
-                // Возвращаем объекты
-                for (Object obj : tempObjects) {
+                // Возвращаем объекты в пул
+                for (Object obj : objects) {
                     returnObject(pool, obj);
                 }
             }
-            long avgActiveMemory = totalActiveMemory / BENCHMARK_ITERATIONS;
             
-            // Очистка ресурсов
-            if (pool instanceof BitmaskRingBufferUltraVarHandle) {
-                ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
+            // Анализируем размер пула с объектами (если возможно)
+            long poolWithObjectsSize = GraphLayout.parseInstance(pool).totalSize();
+            System.out.printf("Pool with objects size: %d bytes%n", poolWithObjectsSize);
+            
+            // Вычисляем overhead
+            if (singleObjectSize > 0) {
+                long estimatedTotalSize = poolSizeBytes + (singleObjectSize * poolSize);
+                long actualOverhead = poolWithObjectsSize - (singleObjectSize * poolSize);
+                System.out.printf("Pool overhead: %d bytes (%6.2f bytes/object)%n", 
+                    actualOverhead, (double) actualOverhead / poolSize);
+            } else {
+                System.out.printf("Pool overhead: %d bytes (не удалось измерить размер объекта)%n", 
+                    poolWithObjectsSize - poolSizeBytes);
             }
-            long afterCleanup = getUsedMemory();
-            long cleanupMemory = afterCleanup - avgActiveMemory;
-            
-            // Выводим результаты
-            System.out.printf("Creation memory:     %8d bytes (%6.2f bytes/object)%n", 
-                creationMemory, (double) creationMemory / poolSize);
-            System.out.printf("Borrow memory:       %8d bytes (%6.2f bytes/object)%n", 
-                borrowMemory, (double) borrowMemory / poolSize);
-            System.out.printf("Return memory:       %8d bytes (%6.2f bytes/object)%n", 
-                returnMemory, (double) returnMemory / poolSize);
-            System.out.printf("Active memory:       %8d bytes (%6.2f bytes/object)%n", 
-                avgActiveMemory - afterCreation, (double) (avgActiveMemory - afterCreation) / poolSize);
-            System.out.printf("Cleanup memory:      %8d bytes (%6.2f bytes/object)%n", 
-                cleanupMemory, (double) cleanupMemory / poolSize);
-            System.out.printf("Total overhead:      %8d bytes (%6.2f bytes/object)%n", 
-                avgActiveMemory - baseMemory, (double) (avgActiveMemory - baseMemory) / poolSize);
             
             // Статистика пула
             Object stats = getStatistics(pool);
             if (stats instanceof ObjectPool.PoolStatistics) {
                 ObjectPool.PoolStatistics poolStats = (ObjectPool.PoolStatistics) stats;
-                System.out.printf("Pool statistics:     maxSize=%d, available=%d, borrowed=%d%n",
+                System.out.printf("Pool statistics: maxSize=%d, available=%d, borrowed=%d%n",
                     poolStats.maxPoolSize, poolStats.availableObjects, poolStats.borrowedObjects);
             } else if (stats instanceof BitmaskRingBufferUltraVarHandle.PoolStats) {
                 BitmaskRingBufferUltraVarHandle.PoolStats poolStats = (BitmaskRingBufferUltraVarHandle.PoolStats) stats;
-                System.out.printf("Pool statistics:     capacity=%d, free=%d, busy=%d%n",
+                System.out.printf("Pool statistics: capacity=%d, free=%d, busy=%d%n",
                     poolStats.capacity, poolStats.freeCount, poolStats.busyCount);
+            }
+            
+            // Очистка ресурсов
+            if (pool instanceof BitmaskRingBufferUltraVarHandle) {
+                ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
             }
             
         } catch (Exception e) {
             System.err.printf("Error benchmarking %s: %s%n", versionName, e.getMessage());
             e.printStackTrace();
         }
-    }
-    
-    private static long getUsedMemory() {
-        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
-        MemoryUsage heapUsage = memoryBean.getHeapMemoryUsage();
-        return heapUsage.getUsed();
     }
     
     @SuppressWarnings("unchecked")

@@ -11,22 +11,24 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class SimpleBenchmark {
     
+    // Конфигурация тестирования
     private static final int THREAD_COUNT = 4;
     private static final int OPERATIONS_PER_THREAD = 10_000; // уменьшено для быстрого теста
     private static final long TIMEOUT_NANOS = 1_000_000; // 1 ms
+    private static final int[] POOL_SIZES = {1024, 4096, 10000}; // Размеры пулов для тестирования
     
     public static void main(String[] args) {
         System.out.println("=== Simple Performance Comparison ===");
         System.out.println("Threads: " + THREAD_COUNT);
         System.out.println("Operations per thread: " + OPERATIONS_PER_THREAD);
         System.out.println("Total operations: " + (THREAD_COUNT * OPERATIONS_PER_THREAD));
+        System.out.println("Pool sizes: " + java.util.Arrays.toString(POOL_SIZES));
         System.out.println();
         
-        // Тест с пулом размером 1024
-        testPool(1024);
-        
-        // Тест с пулом размером 4096
-        testPool(4096);
+        // Тестируем все размеры пулов
+        for (int poolSize : POOL_SIZES) {
+            testPool(poolSize);
+        }
     }
     
     private static void testPool(int poolSize) {

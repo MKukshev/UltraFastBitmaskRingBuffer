@@ -27,10 +27,12 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
     private static class ObjectMetadata {
         final long acquireTime;
         final long threadId;
+        final boolean isCreated; // Флаг, указывающий что объект был создан динамически
         
-        ObjectMetadata(long acquireTime, long threadId) {
+        ObjectMetadata(long acquireTime, long threadId, boolean isCreated) {
             this.acquireTime = acquireTime;
             this.threadId = threadId;
+            this.isCreated = isCreated;
         }
     }
     
@@ -101,24 +103,38 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
             T obj = availableQueue.poll();
             
             if (obj != null) {
-                // Объект найден, трекируем его
-                trackBorrowedObject(obj, startTime);
-                totalAcquires.incrementAndGet();
-                return obj;
+                // Объект найден, трекируем его атомарно (false = не созданный объект)
+                if (trackBorrowedObjectAtomic(obj, startTime, false)) {
+                    totalAcquires.incrementAndGet();
+                    return obj;
+                } else {
+                    // Объект уже трекируется, возвращаем его в очередь и пробуем снова
+                    availableQueue.offer(obj);
+                    continue;
+                }
             }
             
             // Очередь пуста, проверяем возможность создания нового объекта
             int currentActive = activeObjects.get();
             if (currentActive < maxPoolSize) {
-                // Создаем новый объект
-                obj = objectFactory.get();
-                totalCreates.incrementAndGet();
-                activeObjects.incrementAndGet();
-                
-                // Трекируем новый объект
-                trackBorrowedObject(obj, startTime);
-                totalAcquires.incrementAndGet();
-                return obj;
+                // Пытаемся атомарно увеличить счетчик активных объектов
+                if (activeObjects.compareAndSet(currentActive, currentActive + 1)) {
+                    // Создаем новый объект
+                    obj = objectFactory.get();
+                    totalCreates.incrementAndGet();
+                    
+                    // Трекируем новый объект атомарно (true = созданный объект)
+                    if (trackBorrowedObjectAtomic(obj, startTime, true)) {
+                        totalAcquires.incrementAndGet();
+                        return obj;
+                    } else {
+                        // Неожиданная ошибка - объект уже трекируется
+                        activeObjects.decrementAndGet();
+                        throw new IllegalStateException("Newly created object already tracked: " + obj);
+                    }
+                }
+                // CAS не удался, пробуем снова
+                continue;
             }
             
             // Достигнут лимит, проверяем таймаут
@@ -142,7 +158,7 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
      * Возврат объекта в пул
      * 
      * Алгоритм:
-     * 1. Удаляем объект из трекинга
+     * 1. Атомарно удаляем объект из трекинга
      * 2. Возвращаем в очередь доступных объектов
      * 3. Обновляем статистику
      * 
@@ -154,25 +170,49 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
             return;
         }
         
-        // Удаляем из трекинга
+        // Атомарно удаляем из трекинга
         ObjectMetadata metadata = borrowedObjects.remove(obj);
         if (metadata != null) {
             // Возвращаем в очередь
             availableQueue.offer(obj);
             totalReleases.incrementAndGet();
+            
+            // Уменьшаем счетчик активных объектов, если это был созданный объект
+            if (metadata.isCreated) {
+                activeObjects.decrementAndGet();
+            }
         }
     }
     
     /**
-     * Трекинг выданного объекта
+     * Атомарный трекинг выданного объекта
      * 
      * @param obj объект для трекинга
      * @param acquireTime время получения
+     * @param isCreated флаг, указывающий что объект был создан динамически
+     * @return true если объект успешно добавлен в трекинг, false если уже существует
      */
-    private void trackBorrowedObject(T obj, long acquireTime) {
+    private boolean trackBorrowedObjectAtomic(T obj, long acquireTime, boolean isCreated) {
         long threadId = Thread.currentThread().getId();
-        ObjectMetadata metadata = new ObjectMetadata(acquireTime, threadId);
-        borrowedObjects.put(obj, metadata);
+        ObjectMetadata metadata = new ObjectMetadata(acquireTime, threadId, isCreated);
+        
+        // Пытаемся добавить объект в трекинг атомарно
+        ObjectMetadata existing = borrowedObjects.putIfAbsent(obj, metadata);
+        return existing == null; // true если объект был добавлен, false если уже существовал
+    }
+    
+    /**
+     * Трекинг выданного объекта (устаревший метод, оставлен для совместимости)
+     * 
+     * @param obj объект для трекинга
+     * @param acquireTime время получения
+     * @deprecated Используйте trackBorrowedObjectAtomic вместо этого метода
+     */
+    @Deprecated
+    private void trackBorrowedObject(T obj, long acquireTime) {
+        if (!trackBorrowedObjectAtomic(obj, acquireTime, false)) {
+            throw new IllegalStateException("Object already tracked: " + obj);
+        }
     }
     
     /**
