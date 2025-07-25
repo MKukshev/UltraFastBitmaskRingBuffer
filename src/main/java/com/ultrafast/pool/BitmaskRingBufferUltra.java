@@ -176,7 +176,8 @@ public class BitmaskRingBufferUltra<T> {
             
             if (tail.compareAndSet(currentTail, nextTail)) {
                 int index = currentTail;
-                if (tryAcquireSlot(index)) {
+                // Check if slot is actually available before attempting to acquire
+                if (isBitSet(availabilityMaskAddr, index) && tryAcquireSlot(index)) {
                     totalGets.incrementAndGet();
                     return objects[index];
                 }

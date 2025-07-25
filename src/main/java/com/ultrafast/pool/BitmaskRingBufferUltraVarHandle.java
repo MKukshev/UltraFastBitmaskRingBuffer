@@ -204,7 +204,8 @@ public class BitmaskRingBufferUltraVarHandle<T> {
             
             if (tail.compareAndSet(currentTail, nextTail)) {
                 int index = currentTail;
-                if (tryAcquireSlot(index)) {
+                // Проверяем, что слот действительно свободен перед попыткой захвата
+                if (isBitSet(availabilityMask, index) && tryAcquireSlot(index)) {
                     totalGets.incrementAndGet();
                     return objects[index];
                 }

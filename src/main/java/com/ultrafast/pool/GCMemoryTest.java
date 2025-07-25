@@ -27,7 +27,7 @@ public class GCMemoryTest {
     
     private static final int THREAD_COUNT = 8;
     private static final int POOL_SIZE = 10000;
-    private static final int TEST_DURATION_SECONDS = 300; // 5 минут
+    private static final int TEST_DURATION_SECONDS = 60; // 30 секунд для тестирования
     private static final int OPERATIONS_PER_ITERATION = 1000;
     private static final int PAYLOAD_SIZE = 1024; // 1KB на объект
     
@@ -74,14 +74,16 @@ public class GCMemoryTest {
         System.out.println("--- Тестирование " + poolName + " ---");
         
         // Записываем начальные метрики GC
-        long initialGcCount = getTotalGcCount();
-        long initialGcTime = getTotalGcTime();
+        long initialYoungGcCount = getYoungGcCount();
+        long initialYoungGcTime = getYoungGcTime();
+        long initialTotalGcCount = getTotalGcCount();
+        long initialTotalGcTime = getTotalGcTime();
         MemoryUsage initialHeap = memoryBean.getHeapMemoryUsage();
         
         System.out.println("Начальные метрики:");
         System.out.println("  - Использование heap: " + formatBytes(initialHeap.getUsed()));
-        System.out.println("  - Количество GC: " + initialGcCount);
-        System.out.println("  - Время GC: " + initialGcTime + " мс");
+        System.out.println("  - Young GC: " + initialYoungGcCount + " сборок, " + initialYoungGcTime + " мс");
+        System.out.println("  - Всего GC: " + initialTotalGcCount + " сборок, " + initialTotalGcTime + " мс");
         
         // Запускаем нагрузочный тест
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);
@@ -161,8 +163,10 @@ public class GCMemoryTest {
         long testDuration = testEndTime - testStartTime;
         
         // Записываем финальные метрики GC
-        long finalGcCount = getTotalGcCount();
-        long finalGcTime = getTotalGcTime();
+        long finalYoungGcCount = getYoungGcCount();
+        long finalYoungGcTime = getYoungGcTime();
+        long finalTotalGcCount = getTotalGcCount();
+        long finalTotalGcTime = getTotalGcTime();
         MemoryUsage finalHeap = memoryBean.getHeapMemoryUsage();
         
         // Принудительная сборка мусора для получения точных данных
@@ -176,8 +180,10 @@ public class GCMemoryTest {
         MemoryUsage finalHeapAfterGc = memoryBean.getHeapMemoryUsage();
         
         // Вычисляем разницу
-        long gcCountDiff = finalGcCount - initialGcCount;
-        long gcTimeDiff = finalGcTime - initialGcTime;
+        long youngGcCountDiff = finalYoungGcCount - initialYoungGcCount;
+        long youngGcTimeDiff = finalYoungGcTime - initialYoungGcTime;
+        long totalGcCountDiff = finalTotalGcCount - initialTotalGcCount;
+        long totalGcTimeDiff = finalTotalGcTime - initialTotalGcTime;
         long heapUsedDiff = finalHeap.getUsed() - initialHeap.getUsed();
         long heapUsedAfterGc = finalHeapAfterGc.getUsed();
         
@@ -192,10 +198,12 @@ public class GCMemoryTest {
             (totalOperations.get() > 0 ? totalReleaseTime.get() / totalOperations.get() : 0) + " нс");
         
         System.out.println("\nМетрики GC:");
-        System.out.println("  - Количество сборок мусора: " + gcCountDiff);
-        System.out.println("  - Время сборки мусора: " + gcTimeDiff + " мс");
-        System.out.println("  - Среднее время на сборку: " + 
-            (gcCountDiff > 0 ? gcTimeDiff / gcCountDiff : 0) + " мс");
+        System.out.println("  - Young GC сборок: " + youngGcCountDiff + " (влияют на производительность)");
+        System.out.println("  - Время Young GC: " + youngGcTimeDiff + " мс");
+        System.out.println("  - Всего GC сборок: " + totalGcCountDiff + " (все сборщики)");
+        System.out.println("  - Время всех GC: " + totalGcTimeDiff + " мс");
+        System.out.println("  - Среднее время на Young GC: " + 
+            (youngGcCountDiff > 0 ? youngGcTimeDiff / youngGcCountDiff : 0) + " мс");
         
         System.out.println("\nМетрики памяти:");
         System.out.println("  - Изменение использования heap: " + formatBytes(heapUsedDiff));
@@ -225,7 +233,27 @@ public class GCMemoryTest {
     }
     
     /**
-     * Получает общее количество сборок мусора
+     * Получает количество сборок Young Generation (основные сборки, влияющие на производительность)
+     */
+    private static long getYoungGcCount() {
+        return gcBeans.stream()
+            .filter(bean -> bean.getName().contains("Young"))
+            .mapToLong(GarbageCollectorMXBean::getCollectionCount)
+            .sum();
+    }
+    
+    /**
+     * Получает время сборок Young Generation
+     */
+    private static long getYoungGcTime() {
+        return gcBeans.stream()
+            .filter(bean -> bean.getName().contains("Young"))
+            .mapToLong(GarbageCollectorMXBean::getCollectionTime)
+            .sum();
+    }
+    
+    /**
+     * Получает общее количество сборок мусора (все сборщики)
      */
     private static long getTotalGcCount() {
         return gcBeans.stream()
@@ -234,7 +262,7 @@ public class GCMemoryTest {
     }
     
     /**
-     * Получает общее время сборки мусора в миллисекундах
+     * Получает общее время сборки мусора в миллисекундах (все сборщики)
      */
     private static long getTotalGcTime() {
         return gcBeans.stream()

@@ -14,6 +14,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * - Bit Tricks (Long.numberOfTrailingZeros + Lock-free stack)
  * - Ultra (Off-heap + Bit Tricks combined)
  * - Minimal (Off-heap + Bit Tricks - updateMask)
+ * - UltraVarHandleSimple (Simplified version with factory creation and overflow protection)
  */
 public class OffHeapBenchmark {
     
@@ -77,6 +78,10 @@ public class OffHeapBenchmark {
                 // Benchmark ultra+varhandle version (Unsafe replacement)
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
+                
+                // Benchmark ultra+varhandle simple version (with factory creation and overflow protection)
+                benchmarkVersion("UltraVarHandleSimple", poolSize, threadCount, 
+                    () -> new BitmaskRingBufferUltraVarHandleSimple<>(poolSize, () -> new ProcessTask("Task")));
                 
                 // Benchmark classic version (ConcurrentLinkedQueue + ConcurrentHashMap)
                 benchmarkVersion("Classic", poolSize, threadCount, 
@@ -191,6 +196,8 @@ public class OffHeapBenchmark {
             return ((BitmaskRingBufferUltraStack<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
+            return ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
             return ((BitmaskRingBufferClassic<Object>) pool).acquire();
         }
@@ -219,6 +226,8 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraStack<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
+            ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {
             ((BitmaskRingBufferClassic<Object>) pool).release(obj);
         }
