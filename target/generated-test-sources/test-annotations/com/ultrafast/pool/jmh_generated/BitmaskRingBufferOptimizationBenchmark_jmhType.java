@@ -1,0 +1,4 @@
+package com.ultrafast.pool.jmh_generated;
+public class BitmaskRingBufferOptimizationBenchmark_jmhType extends BitmaskRingBufferOptimizationBenchmark_jmhType_B3 {
+}
+

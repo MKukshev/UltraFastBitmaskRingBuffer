@@ -15,13 +15,15 @@ import java.util.concurrent.atomic.AtomicLong;
  * - Ultra (Off-heap + Bit Tricks combined)
  * - Minimal (Off-heap + Bit Tricks - updateMask)
  * - UltraVarHandleSimple (Simplified version with factory creation and overflow protection)
+ * - UltraVarHandleOptimized (ABA-safe stack, padding, Thread.onSpinWait optimizations)
+ * - UltraVarHandleStriped (Striped tail, extended padding, thread-local optimizations)
  */
 public class OffHeapBenchmark {
     
     // Размеры пулов для тестирования
     private static final int[] POOL_SIZES = {1000, 5000, 10000, 50000, 100000};
     // Количество потоков для тестирования
-    private static final int[] THREAD_COUNTS = {1, 4, 8, 12};
+    private static final int[] THREAD_COUNTS = {1, 4, 8, 36};
     private static final int OPERATIONS_PER_THREAD = 10000;
     private static final int WARMUP_ITERATIONS = 3;
     private static final int BENCHMARK_ITERATIONS = 5;
@@ -51,37 +53,18 @@ public class OffHeapBenchmark {
                 benchmarkVersion("Off-Heap", poolSize, threadCount, 
                     () -> new BitmaskRingBufferOffHeap<>(poolSize, () -> new ProcessTask("Task")));
                 
-                // Benchmark bit tricks version
-                benchmarkVersion("BitTricks", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferBitTricks<>(poolSize, () -> new ProcessTask("Task")));
-                
-                // Benchmark ultra version (off-heap + bit tricks)
-                benchmarkVersion("Ultra", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferUltra<>(poolSize, () -> new ProcessTask("Task")));
-                
-                // Benchmark minimal version (off-heap + bit tricks - updateMask)
-                benchmarkVersion("Minimal", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferMinimal<>(poolSize, () -> new ProcessTask("Task")));
-                
-                // Benchmark off-heap+stack version
-                benchmarkVersion("OffHeapStack", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferOffHeapStack<>(poolSize, () -> new ProcessTask("Task")));
-                
-                // Benchmark bit tricks+stack version
-                benchmarkVersion("BitTricksStack", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferBitTricksStack<>(poolSize, () -> new ProcessTask("Task")));
-                
-                // Benchmark ultra+stack version
-                benchmarkVersion("UltraStack", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferUltraStack<>(poolSize, () -> new ProcessTask("Task")));
                 
                 // Benchmark ultra+varhandle version (Unsafe replacement)
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
                 
-                // Benchmark ultra+varhandle simple version (with factory creation and overflow protection)
-                benchmarkVersion("UltraVarHandleSimple", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferUltraVarHandleSimple<>(poolSize, () -> new ProcessTask("Task")));
+                // Benchmark ultra+varhandle striped version (with striped tail, extended padding, thread-local optimizations)
+                benchmarkVersion("UltraVarHandleStriped", poolSize, threadCount, 
+                    () -> new BitmaskRingBufferUltraVarHandleStriped<>(poolSize, () -> new ProcessTask("Task")));
+                
+                // Benchmark ultra+varhandle striped off-heap version (with off-heap padding)
+                benchmarkVersion("UltraVarHandleStripedOffHeap", poolSize, threadCount, 
+                    () -> new BitmaskRingBufferUltraVarHandleStripedOffHeap<>(poolSize, () -> new ProcessTask("Task")));
                 
                 // Benchmark classic version (ConcurrentLinkedQueue + ConcurrentHashMap)
                 benchmarkVersion("Classic", poolSize, threadCount, 
@@ -126,6 +109,12 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraStack<?>) pool).cleanup();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
+            ((BitmaskRingBufferUltraVarHandleOptimized<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+            ((BitmaskRingBufferUltraVarHandleStriped<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+            ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
         }
             }
             
@@ -198,6 +187,12 @@ public class OffHeapBenchmark {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
             return ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
+            return ((BitmaskRingBufferUltraVarHandleOptimized<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+            return ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+            return ((BitmaskRingBufferUltraVarHandleStripedOffHeap<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
             return ((BitmaskRingBufferClassic<Object>) pool).acquire();
         }
@@ -228,6 +223,12 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
             ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
+            ((BitmaskRingBufferUltraVarHandleOptimized<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+            ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+            ((BitmaskRingBufferUltraVarHandleStripedOffHeap<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {
             ((BitmaskRingBufferClassic<Object>) pool).release(obj);
         }

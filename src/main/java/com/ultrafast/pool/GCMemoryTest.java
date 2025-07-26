@@ -15,6 +15,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * Этот тест сравнивает:
  * - BitmaskRingBufferUltraVarHandle (оптимизированная версия)
+ * - BitmaskRingBufferUltraVarHandleStriped (striped tail версия)
+ * - BitmaskRingBufferUltraVarHandleStripedOffHeap (off-heap padding версия)
  * - BitmaskRingBufferClassic (классическая версия)
  * 
  * Метрики:
@@ -27,7 +29,7 @@ public class GCMemoryTest {
     
     private static final int THREAD_COUNT = 8;
     private static final int POOL_SIZE = 10000;
-    private static final int TEST_DURATION_SECONDS = 60; // 30 секунд для тестирования
+    private static final int TEST_DURATION_SECONDS = 30; // 30 секунд для тестирования
     private static final int OPERATIONS_PER_ITERATION = 1000;
     private static final int PAYLOAD_SIZE = 1024; // 1KB на объект
     
@@ -45,11 +47,40 @@ public class GCMemoryTest {
         System.out.println("  - Размер payload: " + PAYLOAD_SIZE + " байт");
         System.out.println();
         
-        // Запускаем тесты
-        testUltraVarHandlePool("BitmaskRingBufferUltraVarHandle", 
-            new BitmaskRingBufferUltraVarHandle<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0)));
+
+
         
-        // Принудительная сборка мусора между тестами
+        // Запускаем тесты
+        Object pool1 = new BitmaskRingBufferUltraVarHandle<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
+        testUltraVarHandlePool("BitmaskRingBufferUltraVarHandle", (BitmaskRingBufferUltraVarHandle<HeavyTask>) pool1);
+
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool1);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        Object pool2 = new BitmaskRingBufferUltraVarHandleStripedOffHeap<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
+        testUltraVarHandleStripedOffHeapPool("BitmaskRingBufferUltraVarHandleStripedOffHeap", (BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool2);
+        
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool2);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        Object pool3 = new BitmaskRingBufferClassic<>(() -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0), 
+            POOL_SIZE / 2, POOL_SIZE, 1000);
+        testObjectPool("BitmaskRingBufferClassic", (ObjectPool<HeavyTask>) pool3);
+
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool3);
         System.gc();
         try {
             Thread.sleep(2000);
@@ -57,9 +88,23 @@ public class GCMemoryTest {
             Thread.currentThread().interrupt();
         }
         
-        testObjectPool("BitmaskRingBufferClassic", 
-            new BitmaskRingBufferClassic<>(() -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0), 
-                POOL_SIZE / 2, POOL_SIZE, 1000));
+        Object pool4 = new BitmaskRingBufferUltraVarHandleStriped<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
+        testUltraVarHandleStripedPool("BitmaskRingBufferUltraVarHandleStriped", (BitmaskRingBufferUltraVarHandleStriped<HeavyTask>) pool4);
+        
+    }
+    
+    /**
+     * Выполняет cleanup для пула в зависимости от его типа
+     */
+    private static void cleanupPool(Object pool) {
+        if (pool instanceof BitmaskRingBufferUltraVarHandle) {
+            ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+            ((BitmaskRingBufferUltraVarHandleStriped<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+            ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
+        }
+        // ObjectPool не требует cleanup
     }
     
     private static void testObjectPool(String poolName, ObjectPool<HeavyTask> pool) {
@@ -67,6 +112,14 @@ public class GCMemoryTest {
     }
     
     private static void testUltraVarHandlePool(String poolName, BitmaskRingBufferUltraVarHandle<HeavyTask> pool) {
+        testPool(poolName, pool, false);
+    }
+    
+    private static void testUltraVarHandleStripedPool(String poolName, BitmaskRingBufferUltraVarHandleStriped<HeavyTask> pool) {
+        testPool(poolName, pool, false);
+    }
+    
+    private static void testUltraVarHandleStripedOffHeapPool(String poolName, BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask> pool) {
         testPool(poolName, pool, false);
     }
     
@@ -110,6 +163,10 @@ public class GCMemoryTest {
                             HeavyTask task;
                             if (isObjectPool) {
                                 task = ((ObjectPool<HeavyTask>) pool).acquire();
+                            } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+                                task = ((BitmaskRingBufferUltraVarHandleStriped<HeavyTask>) pool).getFreeObject();
+                            } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+                                task = ((BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool).getFreeObject();
                             } else {
                                 task = ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).getFreeObject();
                             }
@@ -128,6 +185,10 @@ public class GCMemoryTest {
                                 startTime = System.nanoTime();
                                 if (isObjectPool) {
                                     ((ObjectPool<HeavyTask>) pool).release(task);
+                                } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+                                    ((BitmaskRingBufferUltraVarHandleStriped<HeavyTask>) pool).setFreeObject(task);
+                                } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+                                    ((BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool).setFreeObject(task);
                                 } else {
                                     ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).setFreeObject(task);
                                 }
@@ -222,10 +283,48 @@ public class GCMemoryTest {
             System.out.println("  - Всего созданий: " + stats.totalCreates);
             System.out.println("  - Всего ожиданий: " + stats.totalWaits);
             System.out.println("  - Активных объектов: " + stats.activeObjects);
-        } else {
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
+            BitmaskRingBufferUltraVarHandle.PoolStats stats = ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).getStats();
             System.out.println("\nСтатистика пула (UltraVarHandle):");
+            System.out.println("  - Размер пула: " + stats.capacity);
+            System.out.println("  - Свободных объектов: " + stats.freeCount);
+            System.out.println("  - Занятых объектов: " + stats.busyCount);
+            System.out.println("  - Объектов для обновления: " + stats.updateCount);
+            System.out.println("  - Всего получений: " + stats.totalGets);
+            System.out.println("  - Всего возвратов: " + stats.totalReturns);
+            System.out.println("  - Всего обновлений: " + stats.totalUpdates);
+            System.out.println("  - Bit trick hits: " + stats.bitTrickHits);
+            System.out.println("  - Stack hits: " + stats.stackHits);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+            BitmaskRingBufferUltraVarHandleStriped.PoolStats stats = ((BitmaskRingBufferUltraVarHandleStriped<HeavyTask>) pool).getStats();
+            System.out.println("\nСтатистика пула (UltraVarHandleStriped):");
+            System.out.println("  - Размер пула: " + stats.capacity);
+            System.out.println("  - Свободных объектов: " + stats.freeCount);
+            System.out.println("  - Занятых объектов: " + stats.busyCount);
+            System.out.println("  - Объектов для обновления: " + stats.updateCount);
+            System.out.println("  - Всего получений: " + stats.totalGets);
+            System.out.println("  - Всего возвратов: " + stats.totalReturns);
+            System.out.println("  - Всего обновлений: " + stats.totalUpdates);
+            System.out.println("  - Bit trick hits: " + stats.bitTrickHits);
+            System.out.println("  - Stack hits: " + stats.stackHits);
+            System.out.println("  - Striped tail hits: " + stats.stripedTailHits);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+            BitmaskRingBufferUltraVarHandleStripedOffHeap.PoolStats stats = ((BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool).getStats();
+            System.out.println("\nСтатистика пула (UltraVarHandleStripedOffHeap):");
+            System.out.println("  - Размер пула: " + stats.capacity);
+            System.out.println("  - Свободных объектов: " + stats.freeCount);
+            System.out.println("  - Занятых объектов: " + stats.busyCount);
+            System.out.println("  - Объектов для обновления: " + stats.updateCount);
+            System.out.println("  - Всего получений: " + stats.totalGets);
+            System.out.println("  - Всего возвратов: " + stats.totalReturns);
+            System.out.println("  - Всего обновлений: " + stats.totalUpdates);
+            System.out.println("  - Bit trick hits: " + stats.bitTrickHits);
+            System.out.println("  - Stack hits: " + stats.stackHits);
+            System.out.println("  - Striped tail hits: " + stats.stripedTailHits);
+        } else {
+            System.out.println("\nСтатистика пула:");
             System.out.println("  - Размер пула: " + POOL_SIZE);
-            System.out.println("  - Статистика недоступна для UltraVarHandle");
+            System.out.println("  - Статистика недоступна для данного типа пула");
         }
         
         executor.shutdown();

@@ -1,0 +1,975 @@
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest
+# Parameters: (stackSize = 100)
+
+# Run progress: 0,00% complete, ETA 00:10:30
+# Fork: 1 of 1
+# Warmup Iteration   1: 846357,214 ops/ms
+# Warmup Iteration   2: 847766,068 ops/ms
+# Warmup Iteration   3: 855446,022 ops/ms
+Iteration   1: 863108,638 ops/ms
+Iteration   2: 869150,960 ops/ms
+Iteration   3: 826993,707 ops/ms
+Iteration   4: 606115,750 ops/ms
+Iteration   5: 601285,965 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest":
+  753331,004 ±(99.9%) 529661,671 ops/ms [Average]
+  (min, avg, max) = (601285,965, 753331,004, 869150,960), stdev = 137551,454
+  CI (99.9%): [223669,333, 1282992,675] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest
+# Parameters: (stackSize = 1000)
+
+# Run progress: 3,33% complete, ETA 00:10:14
+# Fork: 1 of 1
+# Warmup Iteration   1: 3869276,441 ops/ms
+# Warmup Iteration   2: 4044630,250 ops/ms
+# Warmup Iteration   3: 4115812,342 ops/ms
+Iteration   1: 4105693,457 ops/ms
+Iteration   2: 4112123,000 ops/ms
+Iteration   3: 4072943,456 ops/ms
+Iteration   4: 4018401,645 ops/ms
+Iteration   5: 3968071,424 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest":
+  4055446,597 ±(99.9%) 236194,329 ops/ms [Average]
+  (min, avg, max) = (3968071,424, 4055446,597, 4112123,000), stdev = 61338,917
+  CI (99.9%): [3819252,267, 4291640,926] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest
+# Parameters: (stackSize = 10000)
+
+# Run progress: 6,67% complete, ETA 00:09:53
+# Fork: 1 of 1
+# Warmup Iteration   1: 3683361,042 ops/ms
+# Warmup Iteration   2: 3873854,633 ops/ms
+# Warmup Iteration   3: 3880910,616 ops/ms
+Iteration   1: 3858402,829 ops/ms
+Iteration   2: 3850853,516 ops/ms
+Iteration   3: 3848136,487 ops/ms
+Iteration   4: 3844873,013 ops/ms
+Iteration   5: 3846588,793 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedABATest":
+  3849770,928 ±(99.9%) 20418,279 ops/ms [Average]
+  (min, avg, max) = (3844873,013, 3849770,928, 3858402,829), stdev = 5302,562
+  CI (99.9%): [3829352,649, 3870189,207] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent
+# Parameters: (stackSize = 100)
+
+# Run progress: 10,00% complete, ETA 00:09:31
+# Fork: 1 of 1
+# Warmup Iteration   1: 240152,888 ops/ms
+# Warmup Iteration   2: 234599,241 ops/ms
+# Warmup Iteration   3: 214380,465 ops/ms
+Iteration   1: 206559,555 ops/ms
+Iteration   2: 223085,185 ops/ms
+Iteration   3: 215619,551 ops/ms
+Iteration   4: 252913,810 ops/ms
+Iteration   5: 225604,341 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent":
+  224756,488 ±(99.9%) 66998,960 ops/ms [Average]
+  (min, avg, max) = (206559,555, 224756,488, 252913,810), stdev = 17399,417
+  CI (99.9%): [157757,529, 291755,448] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent
+# Parameters: (stackSize = 1000)
+
+# Run progress: 13,33% complete, ETA 00:09:10
+# Fork: 1 of 1
+# Warmup Iteration   1: 2050223,647 ops/ms
+# Warmup Iteration   2: 2116192,051 ops/ms
+# Warmup Iteration   3: 2128897,097 ops/ms
+Iteration   1: 2131431,021 ops/ms
+Iteration   2: 2130878,155 ops/ms
+Iteration   3: 2134186,985 ops/ms
+Iteration   4: 2132750,699 ops/ms
+Iteration   5: 2129379,509 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent":
+  2131725,274 ±(99.9%) 7052,653 ops/ms [Average]
+  (min, avg, max) = (2129379,509, 2131725,274, 2134186,985), stdev = 1831,552
+  CI (99.9%): [2124672,621, 2138777,927] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent
+# Parameters: (stackSize = 10000)
+
+# Run progress: 16,67% complete, ETA 00:08:49
+# Fork: 1 of 1
+# Warmup Iteration   1: 2060216,651 ops/ms
+# Warmup Iteration   2: 2117404,752 ops/ms
+# Warmup Iteration   3: 2118916,455 ops/ms
+Iteration   1: 2131740,370 ops/ms
+Iteration   2: 2130576,232 ops/ms
+Iteration   3: 2131333,885 ops/ms
+Iteration   4: 2121001,031 ops/ms
+Iteration   5: 2117380,465 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedConcurrent":
+  2126406,397 ±(99.9%) 25888,555 ops/ms [Average]
+  (min, avg, max) = (2117380,465, 2126406,397, 2131740,370), stdev = 6723,176
+  CI (99.9%): [2100517,841, 2152294,952] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop
+# Parameters: (stackSize = 100)
+
+# Run progress: 20,00% complete, ETA 00:08:28
+# Fork: 1 of 1
+# Warmup Iteration   1: 17108,269 ops/ms
+# Warmup Iteration   2: 17109,664 ops/ms
+# Warmup Iteration   3: 17143,341 ops/ms
+Iteration   1: 17156,033 ops/ms
+Iteration   2: 17152,283 ops/ms
+Iteration   3: 17194,951 ops/ms
+Iteration   4: 17172,653 ops/ms
+Iteration   5: 17162,178 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop":
+  17167,620 ±(99.9%) 65,897 ops/ms [Average]
+  (min, avg, max) = (17152,283, 17167,620, 17194,951), stdev = 17,113
+  CI (99.9%): [17101,723, 17233,516] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop
+# Parameters: (stackSize = 1000)
+
+# Run progress: 23,33% complete, ETA 00:08:06
+# Fork: 1 of 1
+# Warmup Iteration   1: 5152,035 ops/ms
+# Warmup Iteration   2: 5390,515 ops/ms
+# Warmup Iteration   3: 5422,739 ops/ms
+Iteration   1: 5479,074 ops/ms
+Iteration   2: 5482,454 ops/ms
+Iteration   3: 5476,067 ops/ms
+Iteration   4: 5482,441 ops/ms
+Iteration   5: 5431,651 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop":
+  5470,338 ±(99.9%) 83,903 ops/ms [Average]
+  (min, avg, max) = (5431,651, 5470,338, 5482,454), stdev = 21,789
+  CI (99.9%): [5386,435, 5554,240] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop
+# Parameters: (stackSize = 10000)
+
+# Run progress: 26,67% complete, ETA 00:07:45
+# Fork: 1 of 1
+# Warmup Iteration   1: 5118,232 ops/ms
+# Warmup Iteration   2: 5444,744 ops/ms
+# Warmup Iteration   3: 5341,214 ops/ms
+Iteration   1: 5345,690 ops/ms
+Iteration   2: 5373,893 ops/ms
+Iteration   3: 5378,184 ops/ms
+Iteration   4: 5371,001 ops/ms
+Iteration   5: 5360,098 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPop":
+  5365,773 ±(99.9%) 50,312 ops/ms [Average]
+  (min, avg, max) = (5345,690, 5365,773, 5378,184), stdev = 13,066
+  CI (99.9%): [5315,461, 5416,085] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush
+# Parameters: (stackSize = 100)
+
+# Run progress: 30,00% complete, ETA 00:07:24
+# Fork: 1 of 1
+# Warmup Iteration   1: 15927,170 ops/ms
+# Warmup Iteration   2: 15983,863 ops/ms
+# Warmup Iteration   3: 15984,177 ops/ms
+Iteration   1: 15815,243 ops/ms
+Iteration   2: 15947,064 ops/ms
+Iteration   3: 15977,505 ops/ms
+Iteration   4: 16018,074 ops/ms
+Iteration   5: 16016,114 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush":
+  15954,800 ±(99.9%) 321,099 ops/ms [Average]
+  (min, avg, max) = (15815,243, 15954,800, 16018,074), stdev = 83,388
+  CI (99.9%): [15633,701, 16275,899] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush
+# Parameters: (stackSize = 1000)
+
+# Run progress: 33,33% complete, ETA 00:07:03
+# Fork: 1 of 1
+# Warmup Iteration   1: 4208,975 ops/ms
+# Warmup Iteration   2: 4635,192 ops/ms
+# Warmup Iteration   3: 4656,627 ops/ms
+Iteration   1: 4688,918 ops/ms
+Iteration   2: 4670,601 ops/ms
+Iteration   3: 4692,367 ops/ms
+Iteration   4: 4688,148 ops/ms
+Iteration   5: 4658,028 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush":
+  4679,613 ±(99.9%) 56,764 ops/ms [Average]
+  (min, avg, max) = (4658,028, 4679,613, 4692,367), stdev = 14,741
+  CI (99.9%): [4622,849, 4736,376] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush
+# Parameters: (stackSize = 10000)
+
+# Run progress: 36,67% complete, ETA 00:06:42
+# Fork: 1 of 1
+# Warmup Iteration   1: 4233,564 ops/ms
+# Warmup Iteration   2: 4660,490 ops/ms
+# Warmup Iteration   3: 4716,379 ops/ms
+Iteration   1: 4701,211 ops/ms
+Iteration   2: 4701,596 ops/ms
+Iteration   3: 4695,192 ops/ms
+Iteration   4: 4694,502 ops/ms
+Iteration   5: 4696,580 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPush":
+  4697,816 ±(99.9%) 12,945 ops/ms [Average]
+  (min, avg, max) = (4694,502, 4697,816, 4701,596), stdev = 3,362
+  CI (99.9%): [4684,871, 4710,762] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop
+# Parameters: (stackSize = 100)
+
+# Run progress: 40,00% complete, ETA 00:06:21
+# Fork: 1 of 1
+# Warmup Iteration   1: 1040,883 ops/ms
+# Warmup Iteration   2: 1073,725 ops/ms
+# Warmup Iteration   3: 1089,598 ops/ms
+Iteration   1: 1088,160 ops/ms
+Iteration   2: 1086,503 ops/ms
+Iteration   3: 1085,953 ops/ms
+Iteration   4: 1085,206 ops/ms
+Iteration   5: 1088,732 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop":
+  1086,911 ±(99.9%) 5,733 ops/ms [Average]
+  (min, avg, max) = (1085,206, 1086,911, 1088,732), stdev = 1,489
+  CI (99.9%): [1081,177, 1092,644] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop
+# Parameters: (stackSize = 1000)
+
+# Run progress: 43,33% complete, ETA 00:05:59
+# Fork: 1 of 1
+# Warmup Iteration   1: 1347,436 ops/ms
+# Warmup Iteration   2: 1537,405 ops/ms
+# Warmup Iteration   3: 2603,950 ops/ms
+Iteration   1: 2601,434 ops/ms
+Iteration   2: 2630,187 ops/ms
+Iteration   3: 2610,284 ops/ms
+Iteration   4: 2578,017 ops/ms
+Iteration   5: 2578,208 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop":
+  2599,626 ±(99.9%) 85,596 ops/ms [Average]
+  (min, avg, max) = (2578,017, 2599,626, 2630,187), stdev = 22,229
+  CI (99.9%): [2514,030, 2685,222] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop
+# Parameters: (stackSize = 10000)
+
+# Run progress: 46,67% complete, ETA 00:05:38
+# Fork: 1 of 1
+# Warmup Iteration   1: 1352,245 ops/ms
+# Warmup Iteration   2: 1504,613 ops/ms
+# Warmup Iteration   3: 2575,958 ops/ms
+Iteration   1: 2588,206 ops/ms
+Iteration   2: 2596,905 ops/ms
+Iteration   3: 2596,195 ops/ms
+Iteration   4: 2598,984 ops/ms
+Iteration   5: 2596,891 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.optimizedPushPop":
+  2595,436 ±(99.9%) 16,075 ops/ms [Average]
+  (min, avg, max) = (2588,206, 2595,436, 2598,984), stdev = 4,175
+  CI (99.9%): [2579,362, 2611,511] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalABATest
+# Parameters: (stackSize = 100)
+
+# Run progress: 50,00% complete, ETA 00:05:17
+# Fork: 1 of 1
+# Warmup Iteration   1: 1754723,236 ops/ms
+# Warmup Iteration   2: 1769315,576 ops/ms
+# Warmup Iteration   3: 1725289,471 ops/ms
+Iteration   1: 1743436,344 ops/ms
+Iteration   2: 1748670,861 ops/ms
+Iteration   3: 1754708,375 ops/ms
+Iteration   4: 1749376,808 ops/ms
+Iteration   5: 1767704,445 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalABATest":
+  1752779,366 ±(99.9%) 35617,329 ops/ms [Average]
+  (min, avg, max) = (1743436,344, 1752779,366, 1767704,445), stdev = 9249,707
+  CI (99.9%): [1717162,037, 1788396,696] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalABATest
+# Parameters: (stackSize = 1000)
+
+# Run progress: 53,33% complete, ETA 00:04:56
+# Fork: 1 of 1
+# Warmup Iteration   1: 1811611,933 ops/ms
+# Warmup Iteration   2: 1866995,229 ops/ms
+# Warmup Iteration   3: 1855116,411 ops/ms
+Iteration   1: 1855187,475 ops/ms
+Iteration   2: 1851472,011 ops/ms
+Iteration   3: 1846611,383 ops/ms
+Iteration   4: 1849472,879 ops/ms
+Iteration   5: 1822266,605 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalABATest":
+  1845002,071 ±(99.9%) 50393,514 ops/ms [Average]
+  (min, avg, max) = (1822266,605, 1845002,071, 1855187,475), stdev = 13087,036
+  CI (99.9%): [1794608,557, 1895395,585] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 8 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalABATest
+# Parameters: (stackSize = 10000)
+
+# Run progress: 56,67% complete, ETA 00:04:35
+# Fork: 1 of 1
+# Warmup Iteration   1: 1720125,421 ops/ms
+# Warmup Iteration   2: 1761544,135 ops/ms
+# Warmup Iteration   3: 1775022,015 ops/ms
+Iteration   1: 1789092,628 ops/ms
+Iteration   2: 1761722,169 ops/ms
+Iteration   3: 1723407,430 ops/ms
+Iteration   4: 1795978,254 ops/ms
+Iteration   5: 1791476,421 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalABATest":
+  1772335,380 ±(99.9%) 117314,447 ops/ms [Average]
+  (min, avg, max) = (1723407,430, 1772335,380, 1795978,254), stdev = 30466,189
+  CI (99.9%): [1655020,933, 1889649,828] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent
+# Parameters: (stackSize = 100)
+
+# Run progress: 60,00% complete, ETA 00:04:14
+# Fork: 1 of 1
+# Warmup Iteration   1: 740742,402 ops/ms
+# Warmup Iteration   2: 729038,643 ops/ms
+# Warmup Iteration   3: 718221,461 ops/ms
+Iteration   1: 739501,686 ops/ms
+Iteration   2: 733616,825 ops/ms
+Iteration   3: 688921,997 ops/ms
+Iteration   4: 734487,605 ops/ms
+Iteration   5: 740836,229 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent":
+  727472,868 ±(99.9%) 83843,213 ops/ms [Average]
+  (min, avg, max) = (688921,997, 727472,868, 740836,229), stdev = 21773,816
+  CI (99.9%): [643629,655, 811316,082] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent
+# Parameters: (stackSize = 1000)
+
+# Run progress: 63,33% complete, ETA 00:03:52
+# Fork: 1 of 1
+# Warmup Iteration   1: 673105,280 ops/ms
+# Warmup Iteration   2: 693123,315 ops/ms
+# Warmup Iteration   3: 696645,752 ops/ms
+Iteration   1: 691544,822 ops/ms
+Iteration   2: 699528,750 ops/ms
+Iteration   3: 705085,986 ops/ms
+Iteration   4: 691919,553 ops/ms
+Iteration   5: 683335,442 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent":
+  694282,910 ±(99.9%) 32052,703 ops/ms [Average]
+  (min, avg, max) = (683335,442, 694282,910, 705085,986), stdev = 8323,985
+  CI (99.9%): [662230,207, 726335,614] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 4 threads, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent
+# Parameters: (stackSize = 10000)
+
+# Run progress: 66,67% complete, ETA 00:03:31
+# Fork: 1 of 1
+# Warmup Iteration   1: 654627,724 ops/ms
+# Warmup Iteration   2: 652764,611 ops/ms
+# Warmup Iteration   3: 695876,841 ops/ms
+Iteration   1: 689964,092 ops/ms
+Iteration   2: 687497,297 ops/ms
+Iteration   3: 699219,300 ops/ms
+Iteration   4: 693074,766 ops/ms
+Iteration   5: 683332,506 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalConcurrent":
+  690617,592 ±(99.9%) 23044,653 ops/ms [Average]
+  (min, avg, max) = (683332,506, 690617,592, 699219,300), stdev = 5984,623
+  CI (99.9%): [667572,939, 713662,246] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPop
+# Parameters: (stackSize = 100)
+
+# Run progress: 70,00% complete, ETA 00:03:10
+# Fork: 1 of 1
+# Warmup Iteration   1: 31090,732 ops/ms
+# Warmup Iteration   2: 31174,229 ops/ms
+# Warmup Iteration   3: 30993,418 ops/ms
+Iteration   1: 31079,340 ops/ms
+Iteration   2: 31105,816 ops/ms
+Iteration   3: 31129,509 ops/ms
+Iteration   4: 31201,259 ops/ms
+Iteration   5: 31265,843 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPop":
+  31156,353 ±(99.9%) 293,321 ops/ms [Average]
+  (min, avg, max) = (31079,340, 31156,353, 31265,843), stdev = 76,175
+  CI (99.9%): [30863,032, 31449,674] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPop
+# Parameters: (stackSize = 1000)
+
+# Run progress: 73,33% complete, ETA 00:02:49
+# Fork: 1 of 1
+# Warmup Iteration   1: 27109,119 ops/ms
+# Warmup Iteration   2: 27360,465 ops/ms
+# Warmup Iteration   3: 27005,929 ops/ms
+Iteration   1: 26949,637 ops/ms
+Iteration   2: 27117,800 ops/ms
+Iteration   3: 27391,308 ops/ms
+Iteration   4: 26853,050 ops/ms
+Iteration   5: 27260,628 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPop":
+  27114,485 ±(99.9%) 846,974 ops/ms [Average]
+  (min, avg, max) = (26853,050, 27114,485, 27391,308), stdev = 219,956
+  CI (99.9%): [26267,511, 27961,458] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPop
+# Parameters: (stackSize = 10000)
+
+# Run progress: 76,67% complete, ETA 00:02:28
+# Fork: 1 of 1
+# Warmup Iteration   1: 23163,570 ops/ms
+# Warmup Iteration   2: 26538,140 ops/ms
+# Warmup Iteration   3: 26114,269 ops/ms
+Iteration   1: 26805,749 ops/ms
+Iteration   2: 26608,321 ops/ms
+Iteration   3: 26648,240 ops/ms
+Iteration   4: 26651,175 ops/ms
+Iteration   5: 26679,609 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPop":
+  26678,619 ±(99.9%) 290,595 ops/ms [Average]
+  (min, avg, max) = (26608,321, 26678,619, 26805,749), stdev = 75,467
+  CI (99.9%): [26388,024, 26969,214] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPush
+# Parameters: (stackSize = 100)
+
+# Run progress: 80,00% complete, ETA 00:02:07
+# Fork: 1 of 1
+# Warmup Iteration   1: 28150,654 ops/ms
+# Warmup Iteration   2: 25520,066 ops/ms
+# Warmup Iteration   3: 28209,826 ops/ms
+Iteration   1: 28227,274 ops/ms
+Iteration   2: 28213,033 ops/ms
+Iteration   3: 28094,143 ops/ms
+Iteration   4: 28197,496 ops/ms
+Iteration   5: 28245,879 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPush":
+  28195,565 ±(99.9%) 228,881 ops/ms [Average]
+  (min, avg, max) = (28094,143, 28195,565, 28245,879), stdev = 59,440
+  CI (99.9%): [27966,684, 28424,446] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPush
+# Parameters: (stackSize = 1000)
+
+# Run progress: 83,33% complete, ETA 00:01:45
+# Fork: 1 of 1
+# Warmup Iteration   1: 25456,687 ops/ms
+# Warmup Iteration   2: 28206,828 ops/ms
+# Warmup Iteration   3: 25921,973 ops/ms
+Iteration   1: 25859,144 ops/ms
+Iteration   2: 25727,993 ops/ms
+Iteration   3: 25890,039 ops/ms
+Iteration   4: 25867,141 ops/ms
+Iteration   5: 25868,719 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPush":
+  25842,607 ±(99.9%) 250,614 ops/ms [Average]
+  (min, avg, max) = (25727,993, 25842,607, 25890,039), stdev = 65,084
+  CI (99.9%): [25591,994, 26093,221] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPush
+# Parameters: (stackSize = 10000)
+
+# Run progress: 86,67% complete, ETA 00:01:24
+# Fork: 1 of 1
+# Warmup Iteration   1: 24646,323 ops/ms
+# Warmup Iteration   2: 25613,422 ops/ms
+# Warmup Iteration   3: 22974,530 ops/ms
+Iteration   1: 22930,602 ops/ms
+Iteration   2: 22981,068 ops/ms
+Iteration   3: 23049,906 ops/ms
+Iteration   4: 23074,597 ops/ms
+Iteration   5: 23240,698 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPush":
+  23055,374 ±(99.9%) 454,938 ops/ms [Average]
+  (min, avg, max) = (22930,602, 23055,374, 23240,698), stdev = 118,146
+  CI (99.9%): [22600,437, 23510,312] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop
+# Parameters: (stackSize = 100)
+
+# Run progress: 90,00% complete, ETA 00:01:03
+# Fork: 1 of 1
+# Warmup Iteration   1: 1271,816 ops/ms
+# Warmup Iteration   2: 1267,113 ops/ms
+# Warmup Iteration   3: 1271,926 ops/ms
+Iteration   1: 1278,505 ops/ms
+Iteration   2: 1276,544 ops/ms
+Iteration   3: 1274,855 ops/ms
+Iteration   4: 1278,798 ops/ms
+Iteration   5: 1278,262 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop":
+  1277,393 ±(99.9%) 6,423 ops/ms [Average]
+  (min, avg, max) = (1274,855, 1277,393, 1278,798), stdev = 1,668
+  CI (99.9%): [1270,970, 1283,816] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop
+# Parameters: (stackSize = 1000)
+
+# Run progress: 93,33% complete, ETA 00:00:42
+# Fork: 1 of 1
+# Warmup Iteration   1: 1267,570 ops/ms
+# Warmup Iteration   2: 1265,685 ops/ms
+# Warmup Iteration   3: 1264,946 ops/ms
+Iteration   1: 1275,981 ops/ms
+Iteration   2: 1270,229 ops/ms
+Iteration   3: 1271,555 ops/ms
+Iteration   4: 1271,240 ops/ms
+Iteration   5: 1276,298 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop":
+  1273,061 ±(99.9%) 10,994 ops/ms [Average]
+  (min, avg, max) = (1270,229, 1273,061, 1276,298), stdev = 2,855
+  CI (99.9%): [1262,067, 1284,055] (assumes normal distribution)
+
+
+# JMH version: 1.35
+# VM version: JDK 17.0.15, OpenJDK 64-Bit Server VM, 17.0.15+0
+# VM invoker: /opt/homebrew/Cellar/openjdk@17/17.0.15/libexec/openjdk.jdk/Contents/Home/bin/java
+# VM options: -Xms2G -Xmx2G
+# Blackhole mode: compiler (auto-detected, use -Djmh.blackhole.autoDetect=false to disable)
+# Warmup: 3 iterations, 2 s each
+# Measurement: 5 iterations, 3 s each
+# Timeout: 10 min per iteration
+# Threads: 1 thread, will synchronize iterations
+# Benchmark mode: Throughput, ops/time
+# Benchmark: com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop
+# Parameters: (stackSize = 10000)
+
+# Run progress: 96,67% complete, ETA 00:00:21
+# Fork: 1 of 1
+# Warmup Iteration   1: 1269,194 ops/ms
+# Warmup Iteration   2: 1268,074 ops/ms
+# Warmup Iteration   3: 1269,889 ops/ms
+Iteration   1: 1275,964 ops/ms
+Iteration   2: 1274,085 ops/ms
+Iteration   3: 1271,298 ops/ms
+Iteration   4: 1272,204 ops/ms
+Iteration   5: 1280,342 ops/ms
+
+
+Result "com.ultrafast.pool.LockFreeStackBenchmark.originalPushPop":
+  1274,779 ±(99.9%) 13,828 ops/ms [Average]
+  (min, avg, max) = (1271,298, 1274,779, 1280,342), stdev = 3,591
+  CI (99.9%): [1260,951, 1288,607] (assumes normal distribution)
+
+
+# Run complete. Total time: 00:10:34
+
+REMEMBER: The numbers below are just data. To gain reusable insights, you need to follow up on
+why the numbers are the way they are. Use profilers (see -prof, -lprof), design factorial
+experiments, perform baseline and negative tests that provide experimental control, make sure
+the benchmarking environment is safe on JVM/OS/HW level, ask for reviews from the domain experts.
+Do not assume the numbers tell you what you want them to tell.
+
+NOTE: Current JVM experimentally supports Compiler Blackholes, and they are in use. Please exercise
+extra caution when trusting the results, look into the generated code to check the benchmark still
+works, and factor in a small probability of new VM bugs. Additionally, while comparisons between
+different JVMs are already problematic, the performance difference caused by different Blackhole
+modes can be very significant. Please make sure you use the consistent Blackhole mode for comparisons.
+
+Benchmark                                   (stackSize)   Mode  Cnt        Score        Error   Units
+LockFreeStackBenchmark.optimizedABATest             100  thrpt    5   753331,004 ± 529661,671  ops/ms
+LockFreeStackBenchmark.optimizedABATest            1000  thrpt    5  4055446,597 ± 236194,329  ops/ms
+LockFreeStackBenchmark.optimizedABATest           10000  thrpt    5  3849770,928 ±  20418,279  ops/ms
+LockFreeStackBenchmark.optimizedConcurrent          100  thrpt    5   224756,488 ±  66998,960  ops/ms
+LockFreeStackBenchmark.optimizedConcurrent         1000  thrpt    5  2131725,274 ±   7052,653  ops/ms
+LockFreeStackBenchmark.optimizedConcurrent        10000  thrpt    5  2126406,397 ±  25888,555  ops/ms
+LockFreeStackBenchmark.optimizedPop                 100  thrpt    5    17167,620 ±     65,897  ops/ms
+LockFreeStackBenchmark.optimizedPop                1000  thrpt    5     5470,338 ±     83,903  ops/ms
+LockFreeStackBenchmark.optimizedPop               10000  thrpt    5     5365,773 ±     50,312  ops/ms
+LockFreeStackBenchmark.optimizedPush                100  thrpt    5    15954,800 ±    321,099  ops/ms
+LockFreeStackBenchmark.optimizedPush               1000  thrpt    5     4679,613 ±     56,764  ops/ms
+LockFreeStackBenchmark.optimizedPush              10000  thrpt    5     4697,816 ±     12,945  ops/ms
+LockFreeStackBenchmark.optimizedPushPop             100  thrpt    5     1086,911 ±      5,733  ops/ms
+LockFreeStackBenchmark.optimizedPushPop            1000  thrpt    5     2599,626 ±     85,596  ops/ms
+LockFreeStackBenchmark.optimizedPushPop           10000  thrpt    5     2595,436 ±     16,075  ops/ms
+LockFreeStackBenchmark.originalABATest              100  thrpt    5  1752779,366 ±  35617,329  ops/ms
+LockFreeStackBenchmark.originalABATest             1000  thrpt    5  1845002,071 ±  50393,514  ops/ms
+LockFreeStackBenchmark.originalABATest            10000  thrpt    5  1772335,380 ± 117314,447  ops/ms
+LockFreeStackBenchmark.originalConcurrent           100  thrpt    5   727472,868 ±  83843,213  ops/ms
+LockFreeStackBenchmark.originalConcurrent          1000  thrpt    5   694282,910 ±  32052,703  ops/ms
+LockFreeStackBenchmark.originalConcurrent         10000  thrpt    5   690617,592 ±  23044,653  ops/ms
+LockFreeStackBenchmark.originalPop                  100  thrpt    5    31156,353 ±    293,321  ops/ms
+LockFreeStackBenchmark.originalPop                 1000  thrpt    5    27114,485 ±    846,974  ops/ms
+LockFreeStackBenchmark.originalPop                10000  thrpt    5    26678,619 ±    290,595  ops/ms
+LockFreeStackBenchmark.originalPush                 100  thrpt    5    28195,565 ±    228,881  ops/ms
+LockFreeStackBenchmark.originalPush                1000  thrpt    5    25842,607 ±    250,614  ops/ms
+LockFreeStackBenchmark.originalPush               10000  thrpt    5    23055,374 ±    454,938  ops/ms
+LockFreeStackBenchmark.originalPushPop              100  thrpt    5     1277,393 ±      6,423  ops/ms
+LockFreeStackBenchmark.originalPushPop             1000  thrpt    5     1273,061 ±     10,994  ops/ms
+LockFreeStackBenchmark.originalPushPop            10000  thrpt    5     1274,779 ±     13,828  ops/ms

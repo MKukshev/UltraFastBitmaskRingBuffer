@@ -2,6 +2,7 @@ package com.ultrafast.pool;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -14,11 +15,11 @@ import java.util.concurrent.atomic.AtomicLong;
  * - Контроль времени (detectStaleObjects)
  * 
  * ОСТАВЛЕННЫЕ ОПТИМИЗАЦИИ:
- * - Off-heap bitmasks используя VarHandle для GC-free операций
+ * - VarHandle для атомарных операций с массивами
  * - Long.numberOfTrailingZeros() для O(1) поиска свободных слотов
  * - Предварительно вычисленные битовые маски
  * - Lock-free stack для кэширования индексов
- * - Выравнивание памяти по кэш-линиям
+ * - Выравнивание массивов по кэш-линиям для предотвращения false sharing
  * 
  * @param <T> Тип объектов в пуле
  */
@@ -56,6 +57,10 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
     private final T[] objects;
     private final ObjectFactory<T> objectFactory; // Фабрика для создания новых объектов
     
+    // Map для O(1) поиска индекса объекта по ссылке
+    // Это устраняет необходимость в O(n) линейном поиске в setFreeObject
+    private final ConcurrentHashMap<T, Integer> objectToIndex = new ConcurrentHashMap<>();
+    
     // Off-heap битовая маска (только для доступности)
     private final long[] availabilityMask;
     
@@ -70,6 +75,16 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
     private final int[] freeSlotStack;
     private final AtomicInteger stackTop = new AtomicInteger(-1);
     private final int stackSize;
+    
+    // Выравнивание по кэш-линиям для предотвращения false sharing
+    // Это гарантирует, что массивы не будут находиться в одной кэш-линии,
+    // что может привести к инвалидации кэша при одновременном доступе из разных потоков
+    private final int maskSizeAligned;
+    private final int stackSizeAligned;
+    
+    // КЭШИРОВАННЫЙ СЧЕТЧИК СВОБОДНЫХ ОБЪЕКТОВ
+    // Это устраняет необходимость в O(n) поиске при каждом вызове getFreeCount()
+    private final AtomicInteger cachedFreeCount = new AtomicInteger(0);
     
     // УПРОЩЕННАЯ СТАТИСТИКА
     private final AtomicLong totalGets = new AtomicLong(0);
@@ -101,8 +116,12 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
         // Вычисляем размер битовых масок
         this.maskSize = (capacity + 63) / 64;
         
-        // Инициализируем битовые маски
-        this.availabilityMask = new long[maskSize];
+        // Выравниваем размеры по кэш-линиям для предотвращения false sharing
+        // CACHE_LINE_SIZE / 8 = 8 (количество long в кэш-линии)
+        this.maskSizeAligned = (maskSize + (CACHE_LINE_SIZE / 8) - 1) & ~((CACHE_LINE_SIZE / 8) - 1);
+        
+        // Инициализируем битовые маски с выравниванием
+        this.availabilityMask = new long[maskSizeAligned];
         
         // Инициализируем все объекты как доступные (1 = свободен)
         for (int i = 0; i < maskSize; i++) {
@@ -118,12 +137,22 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
         
         // Инициализируем lock-free stack
         this.stackSize = Math.min(capacity / 4, 1024); // Размер стека = min(capacity/4, 1024)
-        this.freeSlotStack = new int[stackSize];
+        // CACHE_LINE_SIZE / 4 = 16 (количество int в кэш-линии)
+        this.stackSizeAligned = (stackSize + (CACHE_LINE_SIZE / 4) - 1) & ~((CACHE_LINE_SIZE / 4) - 1);
+        this.freeSlotStack = new int[stackSizeAligned];
         
         // Создаем объекты
         for (int i = 0; i < capacity; i++) {
             objects[i] = objectFactory.createObject();
         }
+        
+        // Инициализируем Map для быстрого поиска объектов
+        for (int i = 0; i < capacity; i++) {
+            objectToIndex.put(objects[i], i);
+        }
+        
+        // Инициализируем кэшированный счетчик свободных объектов
+        this.cachedFreeCount.set(capacity);
     }
     
     /**
@@ -179,18 +208,10 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
         }
         
         // Пул не полон, но не удалось найти слот из-за contention
-        // Продолжаем попытки с ring buffer без ограничений
-        while (true) {
-            int currentHead = head.get();
-            int nextHead = (currentHead + 1) % capacity;
-            
-            if (head.compareAndSet(currentHead, nextHead)) {
-                // Проверяем, что слот действительно свободен перед попыткой захвата
-                if (isBitSet(availabilityMask, currentHead) && tryAcquireSlot(currentHead)) {
-                    return objects[currentHead];
-                }
-            }
-        }
+        // Вместо бесконечного цикла - создаем новый объект как fallback
+        // Это предотвращает deadlock и обеспечивает стабильную работу
+        totalCreates.incrementAndGet();
+        return objectFactory.createObject();
     }
     
     /**
@@ -205,18 +226,12 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
             return false;
         }
         
-        // Находим индекс объекта в пуле
-        int index = -1;
-        for (int i = 0; i < capacity; i++) {
-            if (objects[i] == object) {
-                index = i;
-                break;
-            }
-        }
+        // O(1) поиск индекса объекта через Map
+        Integer index = objectToIndex.get(object);
         
-        if (index != -1) {
+        if (index != null) {
             // Объект найден в пуле - освобождаем слот
-            if (setBitAtomic(availabilityMask, index, true)) {
+            if (setBitAtomicWithCounter(availabilityMask, index, true)) {
                 totalReturns.incrementAndGet();
                 
                 // Добавляем в stack для быстрого доступа
@@ -233,7 +248,8 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
             int newIndex = findFreeSlotForNewObject();
             if (newIndex >= 0) {
                 objects[newIndex] = object;
-                setBitAtomic(availabilityMask, newIndex, false); // Помечаем как занятый
+                objectToIndex.put(object, newIndex); // Добавляем в Map
+                setBitAtomicWithCounter(availabilityMask, newIndex, false); // Помечаем как занятый
                 totalReturns.incrementAndGet();
                 return true;
             }
@@ -246,21 +262,13 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
     
     /**
      * Получает статистику пула.
+     * Использует кэшированный счетчик для O(1) производительности.
      * 
      * @return Статистика пула
      */
     public SimplePoolStats getStats() {
-        int freeCount = 0;
-        int busyCount = 0;
-        
-        // Подсчитываем свободные и занятые объекты
-        for (int i = 0; i < capacity; i++) {
-            if (isBitSet(availabilityMask, i)) {
-                freeCount++;
-            } else {
-                busyCount++;
-            }
-        }
+        int freeCount = cachedFreeCount.get();
+        int busyCount = capacity - freeCount;
         
         return new SimplePoolStats(
             capacity,
@@ -342,7 +350,7 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
             return false;
         }
         
-        return setBitAtomic(availabilityMask, slotIndex, false);
+        return setBitAtomicWithCounter(availabilityMask, slotIndex, false);
     }
     
     /**
@@ -365,6 +373,37 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
             long newValue = value ? (current | mask) : (current & clearMask);
             
             if (LONG_ARRAY_HANDLE.compareAndSet(array, arrayIndex, current, newValue)) {
+                return true;
+            }
+        }
+    }
+    
+    /**
+     * Устанавливает бит атомарно и обновляет кэшированный счетчик свободных объектов.
+     * 
+     * @param array Массив
+     * @param bitIndex Индекс бита
+     * @param value Значение для установки (true = свободен, false = занят)
+     * @return true если операция была успешной, false в противном случае
+     */
+    private boolean setBitAtomicWithCounter(long[] array, int bitIndex, boolean value) {
+        int arrayIndex = bitIndex / 64;
+        int bitOffset = bitIndex % 64;
+        
+        long mask = BIT_MASKS[bitOffset];
+        long clearMask = CLEAR_MASKS[bitOffset];
+        
+        while (true) {
+            long current = (long) LONG_ARRAY_HANDLE.getVolatile(array, arrayIndex);
+            long newValue = value ? (current | mask) : (current & clearMask);
+            
+            if (LONG_ARRAY_HANDLE.compareAndSet(array, arrayIndex, current, newValue)) {
+                // Обновляем кэшированный счетчик
+                if (value) {
+                    incrementFreeCount(); // Освобождаем слот
+                } else {
+                    decrementFreeCount(); // Занимаем слот
+                }
                 return true;
             }
         }
@@ -403,17 +442,28 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
     
     /**
      * Получает количество свободных объектов в пуле.
+     * Использует кэшированный счетчик для O(1) производительности.
      * 
      * @return Количество свободных объектов
      */
     private int getFreeCount() {
-        int freeCount = 0;
-        for (int i = 0; i < capacity; i++) {
-            if (isBitSet(availabilityMask, i)) {
-                freeCount++;
-            }
-        }
-        return freeCount;
+        return cachedFreeCount.get();
+    }
+    
+    /**
+     * Увеличивает кэшированный счетчик свободных объектов.
+     * Вызывается при освобождении слота.
+     */
+    private void incrementFreeCount() {
+        cachedFreeCount.incrementAndGet();
+    }
+    
+    /**
+     * Уменьшает кэшированный счетчик свободных объектов.
+     * Вызывается при занятии слота.
+     */
+    private void decrementFreeCount() {
+        cachedFreeCount.decrementAndGet();
     }
     
     /**
@@ -479,7 +529,7 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
             }
             
             if (stackTop.compareAndSet(currentTop, currentTop - 1)) {
-                return (Integer) INT_ARRAY_HANDLE.getVolatile(freeSlotStack, currentTop);
+                return (int) INT_ARRAY_HANDLE.getVolatile(freeSlotStack, currentTop);
             }
         }
     }
@@ -488,8 +538,10 @@ public class BitmaskRingBufferUltraVarHandleSimple<T> {
      * Освобождает ресурсы.
      */
     public void cleanup() {
-        // В этой упрощенной версии нет off-heap памяти для освобождения
-        // Просто очищаем ссылки на объекты
+        // Очищаем Map для быстрого поиска объектов
+        objectToIndex.clear();
+        
+        // Очищаем ссылки на объекты
         for (int i = 0; i < capacity; i++) {
             objects[i] = null;
         }

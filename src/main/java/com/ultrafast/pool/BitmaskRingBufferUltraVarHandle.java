@@ -4,6 +4,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -77,6 +78,10 @@ public class BitmaskRingBufferUltraVarHandle<T> {
     private final int capacity;        // Максимальное количество объектов
     private final T[] objects;         // Массив объектов (основное хранилище)
     
+    // Map для O(1) поиска индекса объекта по ссылке
+    // Это устраняет необходимость в O(n) линейном поиске в setFreeObject
+    private final ConcurrentHashMap<T, Integer> objectToIndex = new ConcurrentHashMap<>();
+    
     // Off-heap битовые маски (используя VarHandle для доступа)
     // availabilityMask - отслеживает свободные/занятые объекты (1 = свободен, 0 = занят)
     // staleMask - отслеживает устаревшие объекты (1 = устарел, 0 = актуален)
@@ -88,7 +93,6 @@ public class BitmaskRingBufferUltraVarHandle<T> {
     private final int maskSize;
     
     // Индексы ring buffer (используются как fallback)
-    private final AtomicInteger head = new AtomicInteger(0);  // Голова кольцевого буфера
     private final AtomicInteger tail = new AtomicInteger(0);  // Хвост кольцевого буфера
     
     // Lock-free stack для кэширования индексов свободных слотов (используя VarHandle)
@@ -96,6 +100,12 @@ public class BitmaskRingBufferUltraVarHandle<T> {
     private final int[] freeSlotStack;           // Стек индексов свободных слотов
     private final AtomicInteger stackTop = new AtomicInteger(-1);  // Вершина стека
     private final int stackSize;                 // Размер стека
+    
+    // Выравнивание по кэш-линиям для предотвращения false sharing
+    // Это гарантирует, что массивы не будут находиться в одной кэш-линии,
+    // что может привести к инвалидации кэша при одновременном доступе из разных потоков
+    private final int maskSizeAligned;
+    private final int stackSizeAligned;
     
     // СТАТИСТИКА ДЛЯ МОНИТОРИНГА
     private final AtomicLong totalGets = new AtomicLong(0);        // Общее количество получений
@@ -132,21 +142,28 @@ public class BitmaskRingBufferUltraVarHandle<T> {
         // Каждый long содержит 64 бита, поэтому используем формулу (capacity + 63) / 64
         this.maskSize = (capacity + 63) / 64;
         
-        // Выделяем массивы для битовых масок
+        // Выравниваем размеры по кэш-линиям для предотвращения false sharing
+        // CACHE_LINE_SIZE / 8 = 8 (количество long в кэш-линии)
+        this.maskSizeAligned = (maskSize + (CACHE_LINE_SIZE / 8) - 1) & ~((CACHE_LINE_SIZE / 8) - 1);
+        
+        // Выделяем массивы для битовых масок с выравниванием
         // availabilityMask - отслеживает свободные/занятые объекты
         // staleMask - отслеживает устаревшие объекты
-        this.availabilityMask = new long[maskSize];
-        this.staleMask = new long[maskSize];
+        this.availabilityMask = new long[maskSizeAligned];
+        this.staleMask = new long[maskSizeAligned];
         
         // Инициализируем lock-free stack для свободных слотов
         // Размер стека = min(25% от capacity, 1000) - оптимальный баланс памяти и производительности
         this.stackSize = Math.min(capacity / 4, 1000);
-        this.freeSlotStack = new int[stackSize];
+        // CACHE_LINE_SIZE / 4 = 16 (количество int в кэш-линии)
+        this.stackSizeAligned = (stackSize + (CACHE_LINE_SIZE / 4) - 1) & ~((CACHE_LINE_SIZE / 4) - 1);
+        this.freeSlotStack = new int[stackSizeAligned];
         
         // Создаем массив объектов
         this.objects = (T[]) new Object[capacity];
         for (int i = 0; i < capacity; i++) {
             objects[i] = objectFactory.createObject();
+            objectToIndex.put(objects[i], i); // Заполняем map
         }
         
         // ИНИЦИАЛИЗАЦИЯ: помечаем все объекты как доступные и добавляем в stack
@@ -239,17 +256,10 @@ public class BitmaskRingBufferUltraVarHandle<T> {
             return false;
         }
         
-        // Находим индекс объекта в массиве
-        // Это линейный поиск, но обычно объекты возвращаются быстро
-        int index = -1;
-        for (int i = 0; i < capacity; i++) {
-            if (objects[i] == object) {
-                index = i;
-                break;
-            }
-        }
+        // O(1) поиск индекса объекта через Map
+        Integer index = objectToIndex.get(object);
         
-        if (index == -1) {
+        if (index == null) {
             return false; // Объект не найден в пуле
         }
         
@@ -275,16 +285,10 @@ public class BitmaskRingBufferUltraVarHandle<T> {
             return false;
         }
         
-        // Находим индекс объекта
-        int index = -1;
-        for (int i = 0; i < capacity; i++) {
-            if (objects[i] == object) {
-                index = i;
-                break;
-            }
-        }
+        // O(1) поиск индекса объекта через Map
+        Integer index = objectToIndex.get(object);
         
-        if (index == -1) {
+        if (index == null) {
             return false; // Объект не найден в пуле
         }
         
@@ -346,7 +350,6 @@ public class BitmaskRingBufferUltraVarHandle<T> {
      */
     public List<T> detectStaleObjects(long staleThresholdMs) {
         List<T> staleObjects = new ArrayList<>();
-        long currentTime = System.currentTimeMillis();
         
         for (int i = 0; i < capacity; i++) {
             if (isBitSet(staleMask, i)) {
@@ -604,18 +607,45 @@ public class BitmaskRingBufferUltraVarHandle<T> {
         if (currentTop >= 0) {
             if (stackTop.compareAndSet(currentTop, currentTop - 1)) {
                 // Атомарно читаем значение из старой позиции стека
-                return (Integer) INT_ARRAY_HANDLE.getVolatile(freeSlotStack, currentTop);
+                return (int) INT_ARRAY_HANDLE.getVolatile(freeSlotStack, currentTop);
             }
         }
         return null;
     }
     
     /**
-     * Метод очистки (no-op для этой реализации, так как используем обычные массивы).
+     * Метод очистки ресурсов.
      */
     public void cleanup() {
-        // Очистка не требуется для обычных массивов
-        // В отличие от off-heap версий, где нужно освобождать память
+        // Очищаем Map для быстрого поиска объектов
+        objectToIndex.clear();
+        
+        // Очищаем массивы объектов для ускорения GC
+        if (objects != null) {
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = null;
+            }
+        }
+        
+        // Очищаем битовые маски
+        if (availabilityMask != null) {
+            for (int i = 0; i < availabilityMask.length; i++) {
+                availabilityMask[i] = 0;
+            }
+        }
+        
+        if (staleMask != null) {
+            for (int i = 0; i < staleMask.length; i++) {
+                staleMask[i] = 0;
+            }
+        }
+        
+        // Очищаем стек свободных слотов
+        if (freeSlotStack != null) {
+            for (int i = 0; i < freeSlotStack.length; i++) {
+                freeSlotStack[i] = 0;
+            }
+        }
     }
     
     /**

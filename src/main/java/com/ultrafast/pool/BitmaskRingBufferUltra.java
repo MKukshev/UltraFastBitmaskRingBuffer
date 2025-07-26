@@ -543,6 +543,14 @@ public class BitmaskRingBufferUltra<T> {
      * Cleans up off-heap memory. Must be called when the pool is no longer needed.
      */
     public void cleanup() {
+        // Очищаем массивы объектов для ускорения GC
+        if (objects != null) {
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = null;
+            }
+        }
+        
+        // Освобождаем off-heap память
         UNSAFE.freeMemory(availabilityMaskAddr);
         UNSAFE.freeMemory(staleMaskAddr);
         UNSAFE.freeMemory(freeSlotStackAddr);
