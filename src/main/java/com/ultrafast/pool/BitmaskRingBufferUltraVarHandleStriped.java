@@ -66,18 +66,10 @@ public class BitmaskRingBufferUltraVarHandleStriped<T> {
     // STRIPED TAIL - массив атомарных счетчиков для лучшего распределения нагрузки
     private final StripedTail[] stripedTails;
     
-    // ABA-safe lock-free stack с padding
+    // ABA-safe lock-free stack
     private final int[] freeSlotStack;
     private final AtomicStampedReference<Integer> stackTop; // ABA-safe: (value, stamp)
     private final int stackSize;
-    
-    // Расширенный padding для предотвращения false sharing
-    private final long[] padding1 = new long[8]; // 64 bytes padding
-    private final long[] padding2 = new long[8]; // 64 bytes padding
-    private final long[] padding3 = new long[8]; // 64 bytes padding
-    private final long[] padding4 = new long[8]; // 64 bytes padding
-    private final long[] padding5 = new long[8]; // 64 bytes padding
-    private final long[] padding6 = new long[8]; // 64 bytes padding
     
     // Выравнивание по кэш-линиям
     private final int maskSizeAligned;
@@ -108,17 +100,49 @@ public class BitmaskRingBufferUltraVarHandleStriped<T> {
         
         public StripedTail(int initialValue) {
             this.counter = new AtomicInteger(initialValue);
+            // Инициализируем padding случайными значениями
+            initializePadding();
+        }
+        
+        /**
+         * Инициализирует padding массивы случайными значениями
+         */
+        private void initializePadding() {
+            for (int i = 0; i < 8; i++) {
+                padding1[i] = System.nanoTime();
+                padding2[i] = System.nanoTime();
+                padding3[i] = System.nanoTime();
+                padding4[i] = System.nanoTime();
+            }
+        }
+        
+        /**
+         * Активирует padding для предотвращения false sharing
+         */
+        public void activatePadding() {
+            // Читаем padding для активации кэш-линий
+            long sum = 0;
+            for (int i = 0; i < 8; i++) {
+                sum += padding1[i] + padding2[i] + padding3[i] + padding4[i];
+            }
+            // Используем sum чтобы компилятор не удалил чтение
+            if (sum == 0) {
+                initializePadding(); // Никогда не выполнится, но компилятор не знает
+            }
         }
         
         public int getAndIncrement() {
+            activatePadding(); // Активируем padding перед операцией
             return counter.getAndIncrement();
         }
         
         public int get() {
+            activatePadding(); // Активируем padding перед операцией
             return counter.get();
         }
         
         public void set(int value) {
+            activatePadding(); // Активируем padding перед операцией
             counter.set(value);
         }
     }

@@ -17,6 +17,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * - UltraVarHandleSimple (Simplified version with factory creation and overflow protection)
  * - UltraVarHandleOptimized (ABA-safe stack, padding, Thread.onSpinWait optimizations)
  * - UltraVarHandleStriped (Striped tail, extended padding, thread-local optimizations)
+ * - UltraVarHandleStripedOffHeapAutoExpand (Auto-expanding version with off-heap storage)
  */
 public class OffHeapBenchmark {
     
@@ -65,6 +66,10 @@ public class OffHeapBenchmark {
                 // Benchmark ultra+varhandle striped off-heap version (with off-heap padding)
                 benchmarkVersion("UltraVarHandleStripedOffHeap", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandleStripedOffHeap<>(poolSize, () -> new ProcessTask("Task")));
+                
+                // Benchmark ultra+varhandle striped off-heap auto-expand version (with auto-expansion)
+                benchmarkVersion("UltraVarHandleStripedOffHeapAutoExpand", poolSize, threadCount, 
+                    () -> new BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<>(poolSize, () -> new ProcessTask("Task")));
                 
                 // Benchmark classic version (ConcurrentLinkedQueue + ConcurrentHashMap)
                 benchmarkVersion("Classic", poolSize, threadCount, 
@@ -115,6 +120,8 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraVarHandleStriped<?>) pool).cleanup();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
             ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
+            ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<?>) pool).cleanup();
         }
             }
             
@@ -185,14 +192,14 @@ public class OffHeapBenchmark {
             return ((BitmaskRingBufferUltraStack<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
             return ((BitmaskRingBufferUltraVarHandleOptimized<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
             return ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
             return ((BitmaskRingBufferUltraVarHandleStripedOffHeap<Object>) pool).getFreeObject();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
+            return ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
             return ((BitmaskRingBufferClassic<Object>) pool).acquire();
         }
@@ -221,14 +228,14 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraStack<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
             ((BitmaskRingBufferUltraVarHandleOptimized<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
             ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
             ((BitmaskRingBufferUltraVarHandleStripedOffHeap<Object>) pool).setFreeObject(obj);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
+            ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {
             ((BitmaskRingBufferClassic<Object>) pool).release(obj);
         }

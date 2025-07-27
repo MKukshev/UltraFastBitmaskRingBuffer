@@ -39,16 +39,6 @@ inline,com/ultrafast/pool/LockFreeStackBenchmark.originalPop
 inline,com/ultrafast/pool/LockFreeStackBenchmark.originalPush
 inline,com/ultrafast/pool/LockFreeStackBenchmark.originalPushPop
 inline,com/ultrafast/pool/LockFreeStackBenchmark.setup
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.offHeapExtremeConcurrency
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.offHeapHighConcurrency
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.offHeapMultiThread
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.offHeapSingleThread
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.onHeapExtremeConcurrency
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.onHeapHighConcurrency
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.onHeapMultiThread
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.onHeapSingleThread
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.setup
-inline,com/ultrafast/pool/OffHeapStatsBenchmark.tearDown
 inline,com/ultrafast/pool/StripedTailBenchmark.optimizedExtremeConcurrency
 inline,com/ultrafast/pool/StripedTailBenchmark.optimizedGetOnly
 inline,com/ultrafast/pool/StripedTailBenchmark.optimizedGetOnlyHighConcurrency

@@ -40,9 +40,7 @@ public class ThreeWayComparisonBenchmark {
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
                 
-                // Benchmark UltraVarHandleSimple (simplified with factory creation)
-                benchmarkVersion("UltraVarHandleSimple", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferUltraVarHandleSimple<>(poolSize, () -> new ProcessTask("Task")));
+
                 
                 // Benchmark Classic (ConcurrentLinkedQueue + ConcurrentHashMap)
                 benchmarkVersion("Classic", poolSize, threadCount, 
@@ -129,8 +127,6 @@ public class ThreeWayComparisonBenchmark {
     private static Object getObject(Object pool) {
         if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
             return ((BitmaskRingBufferClassic<Object>) pool).acquire();
         }
@@ -141,8 +137,6 @@ public class ThreeWayComparisonBenchmark {
     private static void returnObject(Object pool, Object obj) {
         if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {
             ((BitmaskRingBufferClassic<Object>) pool).release(obj);
         }

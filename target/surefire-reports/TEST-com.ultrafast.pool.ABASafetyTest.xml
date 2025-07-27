@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.ultrafast.pool.ABASafetyTest" time="0.263" tests="5" errors="0" skipped="0" failures="0">
+  <properties>
+    <property name="java.specification.version" value="23"/>
+    <property name="sun.jnu.encoding" value="UTF-8"/>
+    <property name="java.class.path" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/test-classes:/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/classes:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter/5.9.2/junit-jupiter-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.9.2/junit-jupiter-api-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/Users/maksimkuksev/.m2/repository/org/junit/platform/junit-platform-commons/1.9.2/junit-platform-commons-1.9.2.jar:/Users/maksimkuksev/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.9.2/junit-jupiter-params-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.9.2/junit-jupiter-engine-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/platform/junit-platform-engine/1.9.2/junit-platform-engine-1.9.2.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jmh/jmh-core/1.35/jmh-core-1.35.jar:/Users/maksimkuksev/.m2/repository/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/Users/maksimkuksev/.m2/repository/org/apache/commons/commons-math3/3.2/commons-math3-3.2.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jmh/jmh-generator-annprocess/1.35/jmh-generator-annprocess-1.35.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jol/jol-core/0.17/jol-core-0.17.jar:"/>
+    <property name="java.vm.vendor" value="Homebrew"/>
+    <property name="sun.arch.data.model" value="64"/>
+    <property name="java.vendor.url" value="https://github.com/Homebrew/homebrew-core/issues"/>
+    <property name="os.name" value="Mac OS X"/>
+    <property name="java.vm.specification.version" value="23"/>
+    <property name="sun.java.launcher" value="SUN_STANDARD"/>
+    <property name="user.country" value="RU"/>
+    <property name="sun.boot.library.path" value="/opt/homebrew/Cellar/openjdk/23.0.2/libexec/openjdk.jdk/Contents/Home/lib"/>
+    <property name="sun.java.command" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/surefire/surefirebooter-20250727153754693_3.jar /Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/surefire 2025-07-27T15-37-54_662-jvmRun1 surefire-20250727153754693_1tmp surefire_0-20250727153754693_2tmp"/>
+    <property name="http.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="jdk.debug" value="release"/>
+    <property name="surefire.test.class.path" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/test-classes:/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/classes:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter/5.9.2/junit-jupiter-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.9.2/junit-jupiter-api-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/opentest4j/opentest4j/1.2.0/opentest4j-1.2.0.jar:/Users/maksimkuksev/.m2/repository/org/junit/platform/junit-platform-commons/1.9.2/junit-platform-commons-1.9.2.jar:/Users/maksimkuksev/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.9.2/junit-jupiter-params-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.9.2/junit-jupiter-engine-5.9.2.jar:/Users/maksimkuksev/.m2/repository/org/junit/platform/junit-platform-engine/1.9.2/junit-platform-engine-1.9.2.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jmh/jmh-core/1.35/jmh-core-1.35.jar:/Users/maksimkuksev/.m2/repository/net/sf/jopt-simple/jopt-simple/5.0.4/jopt-simple-5.0.4.jar:/Users/maksimkuksev/.m2/repository/org/apache/commons/commons-math3/3.2/commons-math3-3.2.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jmh/jmh-generator-annprocess/1.35/jmh-generator-annprocess-1.35.jar:/Users/maksimkuksev/.m2/repository/org/openjdk/jol/jol-core/0.17/jol-core-0.17.jar:"/>
+    <property name="sun.cpu.endian" value="little"/>
+    <property name="user.home" value="/Users/maksimkuksev"/>
+    <property name="user.language" value="ru"/>
+    <property name="java.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.version.date" value="2025-01-21"/>
+    <property name="java.home" value="/opt/homebrew/Cellar/openjdk/23.0.2/libexec/openjdk.jdk/Contents/Home"/>
+    <property name="file.separator" value="/"/>
+    <property name="basedir" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer"/>
+    <property name="java.vm.compressedOopsMode" value="Zero based"/>
+    <property name="line.separator" value="&#10;"/>
+    <property name="java.vm.specification.vendor" value="Oracle Corporation"/>
+    <property name="java.specification.name" value="Java Platform API Specification"/>
+    <property name="apple.awt.application.name" value="ForkedBooter"/>
+    <property name="surefire.real.class.path" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer/target/surefire/surefirebooter-20250727153754693_3.jar"/>
+    <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
+    <property name="ftp.nonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="java.runtime.version" value="23.0.2"/>
+    <property name="user.name" value="maksimkuksev"/>
+    <property name="stdout.encoding" value="UTF-8"/>
+    <property name="path.separator" value=":"/>
+    <property name="os.version" value="15.5"/>
+    <property name="java.runtime.name" value="OpenJDK Runtime Environment"/>
+    <property name="file.encoding" value="UTF-8"/>
+    <property name="java.vm.name" value="OpenJDK 64-Bit Server VM"/>
+    <property name="java.vendor.version" value="Homebrew"/>
+    <property name="localRepository" value="/Users/maksimkuksev/.m2/repository"/>
+    <property name="java.vendor.url.bug" value="https://github.com/Homebrew/homebrew-core/issues"/>
+    <property name="java.io.tmpdir" value="/var/folders/3n/0s1t7svs2pnbbvs4xlqlv4y80000gn/T/"/>
+    <property name="java.version" value="23.0.2"/>
+    <property name="user.dir" value="/Users/maksimkuksev/cursor/UltraFastBitmaskRingBuffer"/>
+    <property name="os.arch" value="aarch64"/>
+    <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
+    <property name="native.encoding" value="UTF-8"/>
+    <property name="java.library.path" value="/Users/maksimkuksev/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
+    <property name="java.vm.info" value="mixed mode, sharing"/>
+    <property name="stderr.encoding" value="UTF-8"/>
+    <property name="java.vendor" value="Homebrew"/>
+    <property name="java.vm.version" value="23.0.2"/>
+    <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
+    <property name="socksNonProxyHosts" value="local|*.local|169.254/16|*.169.254/16"/>
+    <property name="java.class.version" value="67.0"/>
+  </properties>
+  <testcase name="testOriginalABASafety" classname="com.ultrafast.pool.ABASafetyTest" time="0.054">
+    <system-out><![CDATA[Original - Successful operations: 80000
+Original - Failed operations: 0
+Original - Final stats: PoolStats{capacity=1000, free=1000, busy=0, updates=0, gets=80000, returns=80000, updates=0, bitTricks=34497, stackHits=45503}
+]]></system-out>
+  </testcase>
+  <testcase name="testStatsUnderABA" classname="com.ultrafast.pool.ABASafetyTest" time="0.034">
+    <system-out><![CDATA[Original stats under ABA: PoolStats{capacity=1000, free=1000, busy=0, updates=0, gets=80000, returns=80000, updates=0, bitTricks=16503, stackHits=63497}
+]]></system-out>
+  </testcase>
+  <testcase name="testABAPerformanceComparison" classname="com.ultrafast.pool.ABASafetyTest" time="0.065">
+    <system-out><![CDATA[Original ABA performance: 30ms
+Optimized ABA performance: 32ms
+Performance improvement: -6,67%
+]]></system-out>
+  </testcase>
+  <testcase name="testHighContentionCorrectness" classname="com.ultrafast.pool.ABASafetyTest" time="0.073"/>
+  <testcase name="testOptimizedABASafety" classname="com.ultrafast.pool.ABASafetyTest" time="0.028">
+    <system-out><![CDATA[Optimized - Successful operations: 80000
+Optimized - Failed operations: 0
+Optimized - Final stats: PoolStats{capacity=1000, free=1000, busy=0, updates=0, gets=80000, returns=80000, updates=0, bitTricks=80000, stackHits=0}
+]]></system-out>
+  </testcase>
+</testsuite>

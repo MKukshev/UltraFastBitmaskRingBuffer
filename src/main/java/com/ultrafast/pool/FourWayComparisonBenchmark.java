@@ -41,9 +41,7 @@ public class FourWayComparisonBenchmark {
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
                 
-                // Benchmark UltraVarHandleSimple (simplified with factory creation)
-                benchmarkVersion("UltraVarHandleSimple", poolSize, threadCount, 
-                    () -> new BitmaskRingBufferUltraVarHandleSimple<>(poolSize, () -> new ProcessTask("Task")));
+
                 
                 // Benchmark UltraVarHandleStriped (striped tail, extended padding, thread-local optimizations)
                 benchmarkVersion("UltraVarHandleStriped", poolSize, threadCount, 
@@ -136,8 +134,6 @@ public class FourWayComparisonBenchmark {
     private static Object getObject(Object pool) {
         if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             return ((BitmaskRingBufferUltraVarHandle<Object>) pool).getFreeObject();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
             return ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
@@ -150,8 +146,6 @@ public class FourWayComparisonBenchmark {
     private static void returnObject(Object pool, Object obj) {
         if (pool instanceof BitmaskRingBufferUltraVarHandle) {
             ((BitmaskRingBufferUltraVarHandle<Object>) pool).setFreeObject(obj);
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
             ((BitmaskRingBufferUltraVarHandleStriped<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {

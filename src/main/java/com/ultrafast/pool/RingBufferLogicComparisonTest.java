@@ -41,8 +41,7 @@ public class RingBufferLogicComparisonTest {
         testClass("BitmaskRingBufferOffHeap", () -> 
             new BitmaskRingBufferOffHeap<>(1, TestObject::new));
         
-        testClass("BitmaskRingBufferUltraVarHandleSimple", () -> 
-            new BitmaskRingBufferUltraVarHandleSimple<>(1, TestObject::new));
+
     }
     
     private static void testWithSmallPool() {
@@ -58,8 +57,7 @@ public class RingBufferLogicComparisonTest {
         testClass("BitmaskRingBufferOffHeap", () -> 
             new BitmaskRingBufferOffHeap<>(2, TestObject::new));
         
-        testClass("BitmaskRingBufferUltraVarHandleSimple", () -> 
-            new BitmaskRingBufferUltraVarHandleSimple<>(2, TestObject::new));
+
     }
     
     private static void testMultithreaded() {
@@ -75,8 +73,7 @@ public class RingBufferLogicComparisonTest {
         testClassMultithreaded("BitmaskRingBufferOffHeap", () -> 
             new BitmaskRingBufferOffHeap<>(3, TestObject::new));
         
-        testClassMultithreaded("BitmaskRingBufferUltraVarHandleSimple", () -> 
-            new BitmaskRingBufferUltraVarHandleSimple<>(3, TestObject::new));
+
     }
     
     private static void testClass(String className, PoolFactory factory) {
@@ -179,8 +176,6 @@ public class RingBufferLogicComparisonTest {
             return ((BitmaskRingBufferUltra<?>) pool).getCapacity();
         } else if (pool instanceof BitmaskRingBufferOffHeap) {
             return ((BitmaskRingBufferOffHeap<?>) pool).getCapacity();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<?>) pool).getCapacity();
         }
         throw new IllegalArgumentException("Неизвестный тип пула: " + pool.getClass());
     }
@@ -192,8 +187,6 @@ public class RingBufferLogicComparisonTest {
             return ((BitmaskRingBufferUltra<?>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferOffHeap) {
             return ((BitmaskRingBufferOffHeap<?>) pool).getFreeObject();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<?>) pool).getFreeObject();
         }
         throw new IllegalArgumentException("Неизвестный тип пула: " + pool.getClass());
     }
@@ -205,8 +198,6 @@ public class RingBufferLogicComparisonTest {
             ((BitmaskRingBufferUltra<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferOffHeap) {
             ((BitmaskRingBufferOffHeap<Object>) pool).setFreeObject(obj);
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            ((BitmaskRingBufferUltraVarHandleSimple<Object>) pool).setFreeObject(obj);
         } else {
             throw new IllegalArgumentException("Неизвестный тип пула: " + pool.getClass());
         }
@@ -219,8 +210,6 @@ public class RingBufferLogicComparisonTest {
             return ((BitmaskRingBufferUltra<?>) pool).getStats();
         } else if (pool instanceof BitmaskRingBufferOffHeap) {
             return ((BitmaskRingBufferOffHeap<?>) pool).getStats();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleSimple) {
-            return ((BitmaskRingBufferUltraVarHandleSimple<?>) pool).getStats();
         }
         throw new IllegalArgumentException("Неизвестный тип пула: " + pool.getClass());
     }
