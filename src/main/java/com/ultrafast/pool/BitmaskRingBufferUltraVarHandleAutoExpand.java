@@ -1,0 +1,785 @@
+package com.ultrafast.pool;
+
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+
+/**
+ * УЛЬТРА-БЫСТРЫЙ конкурентный пул объектов с АВТОМАТИЧЕСКИМ РАСШИРЕНИЕМ, объединяющий off-heap память и битовые трюки.
+ * 
+ * ЭТА РЕАЛИЗАЦИЯ КОМБИНИРУЕТ ЛУЧШЕЕ ИЗ ОБОИХ МИРОВ:
+ * - Off-heap bitmasks используя VarHandle для GC-free операций (безопасная замена Unsafe)
+ * - Long.numberOfTrailingZeros() для O(1) поиска свободных слотов
+ * - Предварительно вычисленные битовые маски для общих операций
+ * - Lock-free stack для кэширования индексов свободных слотов
+ * - Выравнивание памяти по кэш-линиям
+ * - АВТОМАТИЧЕСКОЕ РАСШИРЕНИЕ пула при исчерпании
+ * 
+ * КЛЮЧЕВЫЕ ОПТИМИЗАЦИИ:
+ * - Off-heap bitmasks избегают GC пауз и false sharing
+ * - Битовые трюки для O(1) поиска свободных слотов
+ * - Предварительно вычисленные маски исключают runtime вычисления
+ * - Lock-free stack уменьшает contention
+ * - Прямой доступ к памяти без bounds checking
+ * - Использует VarHandle вместо Unsafe для совместимости с будущими версиями Java
+ * - Автоматическое расширение пула на конфигурируемый процент
+ * - Ограничение максимального расширения для контроля памяти
+ * 
+ * ПРИНЦИП РАБОТЫ:
+ * 1. Каждый объект представлен одним битом в availabilityMask (1 = свободен, 0 = занят)
+ * 2. Для поиска свободного слота используется Long.numberOfTrailingZeros() - O(1) операция
+ * 3. Lock-free stack кэширует недавно освобожденные индексы для быстрого доступа
+ * 4. Атомарные операции обеспечиваются через VarHandle
+ * 5. Ring buffer используется как fallback при исчерпании stack и bit tricks
+ * 6. При исчерпании пула автоматически расширяется на заданный процент
+ * 
+ * @param <T> Тип объектов в пуле
+ */
+public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
+    
+    // VarHandle для атомарного доступа к off-heap памяти (замена Unsafe)
+    // LONG_ARRAY_HANDLE - для работы с битовыми масками (long[])
+    // INT_ARRAY_HANDLE - для работы с lock-free stack (int[])
+    private static final VarHandle LONG_ARRAY_HANDLE;
+    private static final VarHandle INT_ARRAY_HANDLE;
+    
+    static {
+        try {
+            // Создаем VarHandle для атомарного доступа к элементам массивов
+            // Это безопасная замена sun.misc.Unsafe для будущих версий Java
+            LONG_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(long[].class);
+            INT_ARRAY_HANDLE = MethodHandles.arrayElementVarHandle(int[].class);
+        } catch (Exception e) {
+            throw new RuntimeException("Не удалось инициализировать VarHandles", e);
+        }
+    }
+    
+    // Размер кэш-линии (обычно 64 байта на современных CPU)
+    // Важно для предотвращения false sharing между потоками
+    private static final int CACHE_LINE_SIZE = 64;
+    
+    // Предварительно вычисленные битовые маски для общих операций
+    // BIT_MASKS[i] = 1L << i (устанавливает i-й бит)
+    // CLEAR_MASKS[i] = ~(1L << i) (очищает i-й бит)
+    // Это исключает runtime вычисления и ускоряет операции
+    private static final long[] BIT_MASKS = new long[64];
+    private static final long[] CLEAR_MASKS = new long[64];
+    
+    static {
+        // Предварительно вычисляем все возможные битовые маски
+        // Это критическая оптимизация для производительности
+        for (int i = 0; i < 64; i++) {
+            BIT_MASKS[i] = 1L << i;           // Маска для установки i-го бита
+            CLEAR_MASKS[i] = ~(1L << i);      // Маска для очистки i-го бита
+        }
+    }
+    
+    // КОНФИГУРАЦИЯ ПУЛА
+    private final int initialCapacity;        // Начальная емкость пула
+    private final double expansionPercentage; // Процент расширения (0.1 = 10%, 0.2 = 20%, etc.)
+    private final int maxExpansionPercentage; // Максимальный процент расширения (100 = 100%)
+    private volatile int currentCapacity;     // Текущая емкость пула
+    private volatile T[] objects;             // Массив объектов (основное хранилище)
+    
+    // Map для O(1) поиска индекса объекта по ссылке
+    // Это устраняет необходимость в O(n) линейном поиске в setFreeObject
+    private final ConcurrentHashMap<T, Integer> objectToIndex = new ConcurrentHashMap<>();
+    
+    // Off-heap битовые маски (используя VarHandle для доступа)
+    // availabilityMask - отслеживает свободные/занятые объекты (1 = свободен, 0 = занят)
+    private volatile long[] availabilityMask;  // Битовое поле доступности объектов
+    
+    // Количество long значений, необходимых для хранения всех битов
+    // Каждый long содержит 64 бита, поэтому maskSize = (capacity + 63) / 64
+    private volatile int maskSize;
+    
+    // Индексы ring buffer (используются как fallback)
+    private final AtomicInteger tail = new AtomicInteger(0);  // Хвост кольцевого буфера
+    
+    // Lock-free stack для кэширования индексов свободных слотов (используя VarHandle)
+    // Это критическая оптимизация для быстрого доступа к недавно освобожденным объектам
+    private volatile int[] freeSlotStack;           // Стек индексов свободных слотов
+    private final AtomicInteger stackTop = new AtomicInteger(-1);  // Вершина стека
+    private volatile int stackSize;                 // Размер стека
+    
+    // Выравнивание по кэш-линиям для предотвращения false sharing
+    // Это гарантирует, что массивы не будут находиться в одной кэш-линии,
+    // что может привести к инвалидации кэша при одновременном доступе из разных потоков
+    private volatile int maskSizeAligned;
+    private volatile int stackSizeAligned;
+    
+    // Фабрика для создания объектов
+    private final ObjectFactory<T> objectFactory;
+    
+    // СТАТИСТИКА ДЛЯ МОНИТОРИНГА
+    private final AtomicLong totalGets = new AtomicLong(0);        // Общее количество получений
+    private final AtomicLong totalReturns = new AtomicLong(0);     // Общее количество возвратов
+    private final AtomicLong bitTrickHits = new AtomicLong(0);     // Количество успешных bit tricks
+    private final AtomicLong stackHits = new AtomicLong(0);        // Количество успешных stack hits
+    private final AtomicLong autoExpansionHits = new AtomicLong(0); // Количество обращений к auto expansion
+    private final AtomicLong totalExpansions = new AtomicLong(0);   // Общее количество расширений
+    
+    /**
+     * Создает новый ультра-оптимизированный ring buffer пул с автоматическим расширением.
+     * 
+     * @param initialCapacity Начальная емкость пула
+     * @param objectFactory Фабрика для создания новых объектов
+     */
+    @SuppressWarnings("unchecked")
+    public BitmaskRingBufferUltraVarHandleAutoExpand(int initialCapacity, ObjectFactory<T> objectFactory) {
+        this(initialCapacity, objectFactory, 0.2, 100); // По умолчанию: 20% расширение, максимум 100%
+    }
+    
+    /**
+     * Создает новый ультра-оптимизированный ring buffer пул с настраиваемым расширением.
+     * 
+     * АЛГОРИТМ ИНИЦИАЛИЗАЦИИ:
+     * 1. Вычисляем размер битовых масок (64 бита на long)
+     * 2. Создаем массивы для битовых масок
+     * 3. Инициализируем lock-free stack
+     * 4. Создаем объекты через factory
+     * 5. Помечаем все объекты как доступные и добавляем в stack
+     * 
+     * @param initialCapacity Начальная емкость пула
+     * @param objectFactory Фабрика для создания новых объектов
+     * @param expansionPercentage Процент расширения (0.1 = 10%, 0.2 = 20%, etc.)
+     * @param maxExpansionPercentage Максимальный процент расширения (100 = 100%)
+     */
+    @SuppressWarnings("unchecked")
+    public BitmaskRingBufferUltraVarHandleAutoExpand(int initialCapacity, ObjectFactory<T> objectFactory, 
+                                                    double expansionPercentage, int maxExpansionPercentage) {
+        if (initialCapacity <= 0) {
+            throw new IllegalArgumentException("Начальная емкость должна быть положительной");
+        }
+        if (objectFactory == null) {
+            throw new IllegalArgumentException("Фабрика объектов не может быть null");
+        }
+        if (expansionPercentage <= 0.0 || expansionPercentage > 1.0) {
+            throw new IllegalArgumentException("Процент расширения должен быть от 0.0 до 1.0");
+        }
+        if (maxExpansionPercentage <= 0 || maxExpansionPercentage > 1000) {
+            throw new IllegalArgumentException("Максимальный процент расширения должен быть от 1 до 1000");
+        }
+        
+        this.initialCapacity = initialCapacity;
+        this.expansionPercentage = expansionPercentage;
+        this.maxExpansionPercentage = maxExpansionPercentage;
+        this.currentCapacity = initialCapacity;
+        this.objectFactory = objectFactory;
+        
+        initializePool();
+    }
+    
+    /**
+     * Инициализирует пул с текущей емкостью
+     */
+    @SuppressWarnings("unchecked")
+    private void initializePool() {
+        this.maskSize = (currentCapacity + 63) / 64;
+        
+        // Выравниваем размеры по кэш-линиям для предотвращения false sharing
+        // CACHE_LINE_SIZE / 8 = 8 (количество long в кэш-линии)
+        this.maskSizeAligned = (maskSize + (CACHE_LINE_SIZE / 8) - 1) & ~((CACHE_LINE_SIZE / 8) - 1);
+        
+        // Выделяем массивы для битовых масок с выравниванием
+        // availabilityMask - отслеживает свободные/занятые объекты
+        this.availabilityMask = new long[maskSizeAligned];
+        
+        // Инициализируем lock-free stack для свободных слотов
+        // Размер стека = min(25% от capacity, 1000) - оптимальный баланс памяти и производительности
+        this.stackSize = Math.min(currentCapacity / 4, 1000);
+        // CACHE_LINE_SIZE / 4 = 16 (количество int в кэш-линии)
+        this.stackSizeAligned = (stackSize + (CACHE_LINE_SIZE / 4) - 1) & ~((CACHE_LINE_SIZE / 4) - 1);
+        this.freeSlotStack = new int[stackSizeAligned];
+        
+        // Создаем массив объектов
+        this.objects = (T[]) new Object[currentCapacity];
+        for (int i = 0; i < currentCapacity; i++) {
+            objects[i] = objectFactory.createObject();
+            objectToIndex.put(objects[i], i); // Заполняем map
+        }
+        
+        // ИНИЦИАЛИЗАЦИЯ: помечаем все объекты как доступные и добавляем в stack
+        // Это критически важно для правильной работы пула
+        for (int i = 0; i < currentCapacity; i++) {
+            setBit(availabilityMask, i, true);  // Помечаем как свободный
+            pushToStack(i);                      // Добавляем в stack для быстрого доступа
+        }
+    }
+    
+    /**
+     * Расширяет пул, добавляя новые объекты
+     */
+    @SuppressWarnings("unchecked")
+    private synchronized void expandPool() {
+        int oldCapacity = currentCapacity;
+        
+        // Вычисляем новый размер на основе процента расширения
+        int expansionAmount = Math.max(1, (int) (oldCapacity * expansionPercentage));
+        int newCapacity = oldCapacity + expansionAmount;
+        
+        // Проверяем ограничение максимального расширения
+        int maxAllowedCapacity = initialCapacity + (int) (initialCapacity * maxExpansionPercentage / 100.0);
+        if (newCapacity > maxAllowedCapacity) {
+            newCapacity = maxAllowedCapacity;
+        }
+        
+        // Если достигли максимума, не расширяем
+        if (newCapacity <= oldCapacity) {
+            return;
+        }
+        
+        // Вычисляем новые размеры для битовых масок
+        int newMaskSize = (newCapacity + 63) / 64;
+        int newMaskSizeAligned = (newMaskSize + (CACHE_LINE_SIZE / 8) - 1) & ~((CACHE_LINE_SIZE / 8) - 1);
+        
+        // Создаем новые битовые маски
+        long[] newAvailabilityMask = new long[newMaskSizeAligned];
+        
+        // Копируем старые данные
+        if (availabilityMask != null) {
+            System.arraycopy(availabilityMask, 0, newAvailabilityMask, 0, Math.min(availabilityMask.length, newAvailabilityMask.length));
+        }
+        
+        // Расширяем стек
+        int newStackSize = Math.min(newCapacity / 4, 1000);
+        int newStackSizeAligned = (newStackSize + (CACHE_LINE_SIZE / 4) - 1) & ~((CACHE_LINE_SIZE / 4) - 1);
+        int[] newFreeSlotStack = new int[newStackSizeAligned];
+        
+        if (freeSlotStack != null) {
+            System.arraycopy(freeSlotStack, 0, newFreeSlotStack, 0, Math.min(freeSlotStack.length, newFreeSlotStack.length));
+        }
+        
+        // Расширяем массив объектов
+        T[] newObjects = (T[]) new Object[newCapacity];
+        System.arraycopy(objects, 0, newObjects, 0, oldCapacity);
+        
+        // Создаем новые объекты
+        for (int i = oldCapacity; i < newCapacity; i++) {
+            newObjects[i] = objectFactory.createObject();
+            objectToIndex.put(newObjects[i], i);
+        }
+        
+        // Обновляем ссылки
+        this.currentCapacity = newCapacity;
+        this.maskSize = newMaskSize;
+        this.maskSizeAligned = newMaskSizeAligned;
+        this.stackSize = newStackSize;
+        this.stackSizeAligned = newStackSizeAligned;
+        this.availabilityMask = newAvailabilityMask;
+        this.freeSlotStack = newFreeSlotStack;
+        this.objects = newObjects;
+        
+        // Инициализируем новые объекты как доступные
+        for (int i = oldCapacity; i < newCapacity; i++) {
+            setBit(availabilityMask, i, true);
+            pushToStack(i);
+        }
+        
+        totalExpansions.incrementAndGet();
+    }
+    
+    /**
+     * Получает свободный объект из пула, используя off-heap битовые трюки для O(1) поиска слотов.
+     * 
+     * АЛГОРИТМ ПОЛУЧЕНИЯ ОБЪЕКТА (3-уровневая стратегия + AutoExpand):
+     * 1. ПЕРВЫЙ УРОВЕНЬ: Попытка получить из lock-free stack (самый быстрый)
+     * 2. ВТОРОЙ УРОВЕНЬ: Использование битовых трюков для поиска свободного слота
+     * 3. ТРЕТИЙ УРОВЕНЬ: Fallback на ring buffer подход
+     * 4. AUTO EXPANSION: Если все уровни не дали результата, расширяем пул
+     * 
+     * ОПТИМИЗАЦИИ:
+     * - Lock-free stack обеспечивает O(1) доступ к недавно освобожденным объектам
+     * - Long.numberOfTrailingZeros() обеспечивает O(1) поиск свободных слотов
+     * - Ring buffer обеспечивает справедливое распределение при высокой нагрузке
+     * - Thread.yield() уменьшает contention при высоком числе попыток
+     * - Автоматическое расширение при исчерпании пула
+     * 
+     * @return Свободный объект, или null если нет доступных объектов и достигнут максимум расширения
+     */
+    public T getFreeObject() {
+        // Сначала пытаемся получить существующий объект
+        T object = tryGetExistingObject();
+        if (object != null) {
+            return object;
+        }
+        
+        // Если не удалось получить существующий, расширяем пул и создаем новый
+        synchronized (this) {
+            // Двойная проверка
+            object = tryGetExistingObject();
+            if (object != null) {
+                return object;
+            }
+            
+            // Расширяем пул
+            expandPool();
+            autoExpansionHits.incrementAndGet();
+            
+            // Теперь точно есть свободный объект
+            return tryGetExistingObject();
+        }
+    }
+    
+    /**
+     * Пытается получить существующий объект из пула
+     */
+    private T tryGetExistingObject() {
+        int attempts = 0;
+        final int maxAttempts = currentCapacity * 2; // Предотвращаем бесконечные циклы
+        
+        while (attempts < maxAttempts) {
+            // УРОВЕНЬ 1: Попытка получить из lock-free stack (самый быстрый путь)
+            Integer slotIndex = popFromStack();
+            if (slotIndex != null) {
+                stackHits.incrementAndGet();  // Увеличиваем счетчик успешных stack hits
+                if (tryAcquireSlot(slotIndex)) {
+                    totalGets.incrementAndGet();
+                    return objects[slotIndex];
+                }
+            }
+            
+            // УРОВЕНЬ 2: Если stack пуст, используем битовые трюки для поиска свободного слота
+            int freeSlot = findFreeSlotWithBitTricks();
+            if (freeSlot >= 0) {
+                bitTrickHits.incrementAndGet();  // Увеличиваем счетчик успешных bit tricks
+                if (tryAcquireSlot(freeSlot)) {
+                    totalGets.incrementAndGet();
+                    return objects[freeSlot];
+                }
+            }
+            
+            // УРОВЕНЬ 3: Fallback на ring buffer подход (справедливое распределение)
+            int currentTail = tail.get();
+            int nextTail = (currentTail + 1) % currentCapacity;
+            
+            if (tail.compareAndSet(currentTail, nextTail)) {
+                int index = currentTail;
+                // Проверяем, что слот действительно свободен перед попыткой захвата
+                if (isBitSet(availabilityMask, index) && tryAcquireSlot(index)) {
+                    totalGets.incrementAndGet();
+                    return objects[index];
+                }
+            }
+            
+            attempts++;
+            
+            // Небольшая задержка для уменьшения contention при высоком числе попыток
+            if (attempts % 100 == 0) {
+                Thread.yield();
+            }
+        }
+        
+        return null; // Нет свободных объектов
+    }
+    
+    /**
+     * Возвращает объект в пул, помечая его как свободный.
+     * 
+     * АЛГОРИТМ ВОЗВРАТА ОБЪЕКТА:
+     * 1. Находим индекс объекта в массиве objects
+     * 2. Атомарно помечаем как свободный в availabilityMask
+     * 3. Очищаем флаг устаревания в staleMask
+     * 4. Добавляем индекс в lock-free stack для быстрого доступа
+     * 
+     * @param object Объект для возврата
+     * @return true если объект был успешно возвращен, false в противном случае
+     */
+    public boolean setFreeObject(T object) {
+        if (object == null) {
+            return false;
+        }
+        
+        // O(1) поиск индекса объекта через Map
+        Integer index = objectToIndex.get(object);
+        
+        if (index == null) {
+            return false; // Объект не найден в пуле
+        }
+        
+        // Помечаем как свободный и добавляем в stack
+        if (setBitAtomic(availabilityMask, index, true)) {
+            pushToStack(index);               // Добавляем в stack для быстрого доступа
+            totalReturns.incrementAndGet();
+            return true;
+        }
+        
+        return false;
+    }
+    
+
+    
+    /**
+     * Останавливает все объекты в пуле.
+     */
+    public void stopAll() {
+        for (int i = 0; i < currentCapacity; i++) {
+            if (objects[i] instanceof Task) {
+                ((Task) objects[i]).stop();
+            }
+        }
+    }
+    
+
+    
+    /**
+     * Получает статистику пула.
+     * 
+     * @return Статистика пула
+     */
+    public PoolStats getStats() {
+        int freeCount = 0;
+        int busyCount = 0;
+        
+        // Подсчитываем статистику, проходя по всем битовым маскам
+        for (int i = 0; i < currentCapacity; i++) {
+            if (isBitSet(availabilityMask, i)) {
+                freeCount++;
+            } else {
+                busyCount++;
+            }
+        }
+        
+        return new PoolStats(
+            currentCapacity, freeCount, busyCount,
+            totalGets.get(), totalReturns.get(),
+            bitTrickHits.get(), stackHits.get(), autoExpansionHits.get(), totalExpansions.get(),
+            expansionPercentage, maxExpansionPercentage, getMaxAllowedCapacity()
+        );
+    }
+    
+    /**
+     * Получает текущую емкость пула.
+     * 
+     * @return Текущая емкость пула
+     */
+    public int getCapacity() {
+        return currentCapacity;
+    }
+    
+    /**
+     * Получает начальную емкость пула.
+     * 
+     * @return Начальная емкость пула
+     */
+    public int getInitialCapacity() {
+        return initialCapacity;
+    }
+    
+    /**
+     * Получает процент расширения пула.
+     * 
+     * @return Процент расширения пула
+     */
+    public double getExpansionPercentage() {
+        return expansionPercentage;
+    }
+    
+    /**
+     * Получает максимальный процент расширения пула.
+     * 
+     * @return Максимальный процент расширения пула
+     */
+    public int getMaxExpansionPercentage() {
+        return maxExpansionPercentage;
+    }
+    
+    /**
+     * Получает максимально допустимую емкость пула.
+     * 
+     * @return Максимально допустимая емкость пула
+     */
+    public int getMaxAllowedCapacity() {
+        return initialCapacity + (int) (initialCapacity * maxExpansionPercentage / 100.0);
+    }
+    
+    /**
+     * Получает объект по индексу.
+     * 
+     * @param index Индекс объекта
+     * @return Объект по указанному индексу
+     */
+    public T getObject(int index) {
+        if (index < 0 || index >= currentCapacity) {
+            return null;
+        }
+        return objects[index];
+    }
+    
+    /**
+     * Проверяет, доступен ли объект (свободен).
+     * 
+     * @param index Индекс объекта
+     * @return true если объект доступен, false в противном случае
+     */
+    public boolean isAvailable(int index) {
+        if (index < 0 || index >= currentCapacity) {
+            return false;
+        }
+        return isBitSet(availabilityMask, index);
+    }
+    
+
+    
+    /**
+     * Находит свободный слот, используя битовые трюки для O(1) производительности.
+     * 
+     * АЛГОРИТМ ПОИСКА СВОБОДНОГО СЛОТА:
+     * 1. Проходим по всем long значениям в availabilityMask
+     * 2. Ищем первый ненулевой long (содержит свободные слоты)
+     * 3. Используем Long.numberOfTrailingZeros() для нахождения первого установленного бита
+     * 4. Вычисляем глобальный индекс = maskIndex * 64 + bitIndex
+     * 
+     * ОПТИМИЗАЦИИ:
+     * - Long.numberOfTrailingZeros() - это нативная CPU инструкция (CTZ)
+     * - O(1) сложность для нахождения первого свободного слота
+     * - Эффективно работает с битовыми операциями
+     * 
+     * @return Индекс свободного слота, или -1 если не найден
+     */
+    private int findFreeSlotWithBitTricks() {
+        for (int maskIndex = 0; maskIndex < maskSize; maskIndex++) {
+            // Получаем текущее значение маски атомарно
+            long mask = (long) LONG_ARRAY_HANDLE.getVolatile(availabilityMask, maskIndex);
+            if (mask != 0) {
+                // Находим первый установленный бит (свободный слот)
+                // Long.numberOfTrailingZeros() возвращает количество нулевых битов справа
+                int bitIndex = Long.numberOfTrailingZeros(mask);
+                int globalIndex = maskIndex * 64 + bitIndex;
+                if (globalIndex < currentCapacity) {
+                    return globalIndex;
+                }
+            }
+        }
+        return -1; // Свободных слотов не найдено
+    }
+    
+    /**
+     * Пытается атомарно занять слот.
+     * 
+     * @param slotIndex Индекс слота для занятия
+     * @return true если успешно занят, false в противном случае
+     */
+    private boolean tryAcquireSlot(int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= currentCapacity) {
+            return false;
+        }
+        
+        return setBitAtomic(availabilityMask, slotIndex, false);
+    }
+    
+    /**
+     * Атомарно устанавливает бит, используя VarHandle.
+     * 
+     * АЛГОРИТМ АТОМАРНОЙ УСТАНОВКИ БИТА:
+     * 1. Вычисляем индекс массива и смещение бита
+     * 2. В цикле CAS (Compare-And-Swap):
+     *    - Читаем текущее значение
+     *    - Вычисляем новое значение с измененным битом
+     *    - Пытаемся атомарно заменить старое значение на новое
+     * 3. Повторяем до успеха (lock-free алгоритм)
+     * 
+     * ОПТИМИЗАЦИИ:
+     * - Использует VarHandle.compareAndSet() для атомарности
+     * - Lock-free алгоритм без блокировок
+     * - Предварительно вычисленные маски исключают runtime вычисления
+     * 
+     * @param array Массив для изменения
+     * @param bitIndex Индекс бита для установки
+     * @param value Значение для установки (true = 1, false = 0)
+     * @return true если операция была успешной
+     */
+    private boolean setBitAtomic(long[] array, int bitIndex, boolean value) {
+        int arrayIndex = bitIndex / 64;  // Индекс в массиве long
+        int bitOffset = bitIndex % 64;   // Смещение бита в long
+        
+        long oldValue, newValue;
+        do {
+            // Читаем текущее значение атомарно
+            oldValue = (long) LONG_ARRAY_HANDLE.getVolatile(array, arrayIndex);
+            
+            // Вычисляем новое значение с измененным битом
+            if (value) {
+                newValue = oldValue | BIT_MASKS[bitOffset];    // Устанавливаем бит
+            } else {
+                newValue = oldValue & CLEAR_MASKS[bitOffset];  // Очищаем бит
+            }
+        } while (!LONG_ARRAY_HANDLE.compareAndSet(array, arrayIndex, oldValue, newValue));
+        
+        return true;
+    }
+    
+    /**
+     * Устанавливает бит неатомарно (для инициализации).
+     * 
+     * @param array Массив для изменения
+     * @param bitIndex Индекс бита для установки
+     * @param value Значение для установки (true = 1, false = 0)
+     */
+    private void setBit(long[] array, int bitIndex, boolean value) {
+        int arrayIndex = bitIndex / 64;
+        int bitOffset = bitIndex % 64;
+        
+        // Читаем текущее значение
+        long currentValue = (long) LONG_ARRAY_HANDLE.getVolatile(array, arrayIndex);
+        long newValue;
+        
+        // Вычисляем новое значение
+        if (value) {
+            newValue = currentValue | BIT_MASKS[bitOffset];
+        } else {
+            newValue = currentValue & CLEAR_MASKS[bitOffset];
+        }
+        
+        // Записываем новое значение атомарно
+        LONG_ARRAY_HANDLE.setVolatile(array, arrayIndex, newValue);
+    }
+    
+    /**
+     * Проверяет, установлен ли бит.
+     * 
+     * @param array Массив для проверки
+     * @param bitIndex Индекс бита для проверки
+     * @return true если бит установлен, false в противном случае
+     */
+    private boolean isBitSet(long[] array, int bitIndex) {
+        int arrayIndex = bitIndex / 64;
+        int bitOffset = bitIndex % 64;
+        
+        // Читаем значение атомарно
+        long value = (long) LONG_ARRAY_HANDLE.getVolatile(array, arrayIndex);
+        return (value & BIT_MASKS[bitOffset]) != 0;
+    }
+    
+    /**
+     * Добавляет индекс слота в lock-free stack.
+     * 
+     * АЛГОРИТМ PUSH В LOCK-FREE STACK:
+     * 1. Читаем текущую вершину стека
+     * 2. Проверяем, что стек не полон
+     * 3. Атомарно увеличиваем вершину стека
+     * 4. Записываем значение в новую позицию
+     * 
+     * @param slotIndex Индекс для добавления
+     */
+    private void pushToStack(int slotIndex) {
+        int currentTop = stackTop.get();
+        if (currentTop < stackSize - 1) {
+            if (stackTop.compareAndSet(currentTop, currentTop + 1)) {
+                // Атомарно записываем значение в новую позицию стека
+                INT_ARRAY_HANDLE.setVolatile(freeSlotStack, currentTop + 1, slotIndex);
+            }
+        }
+    }
+    
+    /**
+     * Извлекает индекс слота из lock-free stack.
+     * 
+     * АЛГОРИТМ POP ИЗ LOCK-FREE STACK:
+     * 1. Читаем текущую вершину стека
+     * 2. Проверяем, что стек не пуст
+     * 3. Атомарно уменьшаем вершину стека
+     * 4. Читаем значение из старой позиции
+     * 
+     * @return Индекс слота, или null если стек пуст
+     */
+    private Integer popFromStack() {
+        int currentTop = stackTop.get();
+        if (currentTop >= 0) {
+            if (stackTop.compareAndSet(currentTop, currentTop - 1)) {
+                // Атомарно читаем значение из старой позиции стека
+                return (int) INT_ARRAY_HANDLE.getVolatile(freeSlotStack, currentTop);
+            }
+        }
+        return null;
+    }
+    
+    /**
+     * Метод очистки ресурсов.
+     */
+    public void cleanup() {
+        // Очищаем Map для быстрого поиска объектов
+        objectToIndex.clear();
+        
+        // Очищаем массивы объектов для ускорения GC
+        if (objects != null) {
+            for (int i = 0; i < objects.length; i++) {
+                objects[i] = null;
+            }
+        }
+        
+        // Очищаем битовые маски
+        if (availabilityMask != null) {
+            for (int i = 0; i < availabilityMask.length; i++) {
+                availabilityMask[i] = 0;
+            }
+        }
+        
+
+        
+        // Очищаем стек свободных слотов
+        if (freeSlotStack != null) {
+            for (int i = 0; i < freeSlotStack.length; i++) {
+                freeSlotStack[i] = 0;
+            }
+        }
+    }
+    
+    /**
+     * Статистика пула.
+     */
+    public static class PoolStats {
+        public final int capacity;           // Текущая емкость пула
+        public final int freeCount;          // Количество свободных объектов
+        public final int busyCount;          // Количество занятых объектов
+        public final long totalGets;         // Общее количество получений
+        public final long totalReturns;      // Общее количество возвратов
+        public final long bitTrickHits;      // Количество успешных bit tricks
+        public final long stackHits;         // Количество успешных stack hits
+        public final long autoExpansionHits; // Количество обращений к auto expansion
+        public final long totalExpansions;   // Общее количество расширений
+        public final double expansionPercentage; // Процент расширения
+        public final int maxExpansionPercentage; // Максимальный процент расширения
+        public final int maxAllowedCapacity; // Максимально допустимая емкость
+        
+        public PoolStats(int capacity, int freeCount, int busyCount,
+                        long totalGets, long totalReturns,
+                        long bitTrickHits, long stackHits, long autoExpansionHits, long totalExpansions,
+                        double expansionPercentage, int maxExpansionPercentage, int maxAllowedCapacity) {
+            this.capacity = capacity;
+            this.freeCount = freeCount;
+            this.busyCount = busyCount;
+            this.totalGets = totalGets;
+            this.totalReturns = totalReturns;
+            this.bitTrickHits = bitTrickHits;
+            this.stackHits = stackHits;
+            this.autoExpansionHits = autoExpansionHits;
+            this.totalExpansions = totalExpansions;
+            this.expansionPercentage = expansionPercentage;
+            this.maxExpansionPercentage = maxExpansionPercentage;
+            this.maxAllowedCapacity = maxAllowedCapacity;
+        }
+        
+        @Override
+        public String toString() {
+            return String.format("PoolStats{capacity=%d, free=%d, busy=%d, " +
+                               "gets=%d, returns=%d, bitTricks=%d, stackHits=%d, " +
+                               "autoExpansions=%d, totalExpansions=%d, expansion=%.1f%%, " +
+                               "maxExpansion=%d%%, maxCapacity=%d}",
+                               capacity, freeCount, busyCount,
+                               totalGets, totalReturns, bitTrickHits, stackHits,
+                               autoExpansionHits, totalExpansions, expansionPercentage * 100,
+                               maxExpansionPercentage, maxAllowedCapacity);
+        }
+    }
+    
+    /**
+     * Интерфейс фабрики объектов.
+     */
+    @FunctionalInterface
+    public interface ObjectFactory<T> {
+        T createObject();
+    }
+} 

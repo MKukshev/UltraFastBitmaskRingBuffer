@@ -17,7 +17,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * - BitmaskRingBufferUltraVarHandle (оптимизированная версия)
  * - BitmaskRingBufferUltraVarHandleStriped (striped tail версия)
  * - BitmaskRingBufferUltraVarHandleStripedOffHeap (off-heap padding версия)
- * - BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand (auto-expanding версия)
+ * - BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand (auto-expanding версия с off-heap)
+ * - BitmaskRingBufferUltraVarHandleAutoExpand (auto-expanding версия на базе UltraVarHandle)
  * - BitmaskRingBufferClassic (классическая версия)
  * 
  * Метрики:
@@ -88,6 +89,18 @@ public class GCMemoryTest {
             Thread.currentThread().interrupt();
         }
 
+        Object pool6 = new BitmaskRingBufferUltraVarHandleAutoExpand<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
+        testUltraVarHandleAutoExpandPool("BitmaskRingBufferUltraVarHandleAutoExpand", (BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool6);        
+        
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool6);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         Object pool3 = new BitmaskRingBufferClassic<>(() -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0), 
             POOL_SIZE / 2, POOL_SIZE, 1000);
         testObjectPool("BitmaskRingBufferClassic", (ObjectPool<HeavyTask>) pool3);
@@ -117,6 +130,8 @@ public class GCMemoryTest {
             ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
             ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<?>) pool).cleanup();
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
+            ((BitmaskRingBufferUltraVarHandleAutoExpand<?>) pool).cleanup();
         }
         // ObjectPool не требует cleanup
     }
@@ -138,6 +153,10 @@ public class GCMemoryTest {
     }
     
     private static void testUltraVarHandleStripedOffHeapAutoExpandPool(String poolName, BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask> pool) {
+        testPool(poolName, pool, false);
+    }
+    
+    private static void testUltraVarHandleAutoExpandPool(String poolName, BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask> pool) {
         testPool(poolName, pool, false);
     }
     
@@ -187,6 +206,8 @@ public class GCMemoryTest {
                                 task = ((BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool).getFreeObject();
                             } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
                                 task = ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool).getFreeObject();
+                            } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
+                                task = ((BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool).getFreeObject();
                             } else {
                                 task = ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).getFreeObject();
                             }
@@ -211,6 +232,8 @@ public class GCMemoryTest {
                                     ((BitmaskRingBufferUltraVarHandleStripedOffHeap<HeavyTask>) pool).setFreeObject(task);
                                 } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
                                     ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool).setFreeObject(task);
+                                } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
+                                    ((BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool).setFreeObject(task);
                                 } else {
                                     ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).setFreeObject(task);
                                 }
@@ -354,6 +377,16 @@ public class GCMemoryTest {
             System.out.println("  - Bit trick hits: " + stats.bitTrickHits);
             System.out.println("  - Stack hits: " + stats.stackHits);
             System.out.println("  - Striped tail hits: " + stats.stripedTailHits);
+            System.out.println("  - Auto expansion hits: " + stats.autoExpansionHits);
+            System.out.println("  - Total expansions: " + stats.totalExpansions);
+        } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
+            BitmaskRingBufferUltraVarHandleAutoExpand.PoolStats stats = ((BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool).getStats();
+            System.out.println("\nСтатистика пула (UltraVarHandleAutoExpand):");
+            System.out.println("  - Размер пула: " + stats.capacity);
+            System.out.println("  - Свободных объектов: " + stats.freeCount);
+            System.out.println("  - Занятых объектов: " + stats.busyCount);
+            System.out.println("  - Всего получений: " + stats.totalGets);
+            System.out.println("  - Всего возвратов: " + stats.totalReturns);
             System.out.println("  - Auto expansion hits: " + stats.autoExpansionHits);
             System.out.println("  - Total expansions: " + stats.totalExpansions);
         } else {
