@@ -31,7 +31,7 @@ public class GCMemoryTest {
     
     private static final int THREAD_COUNT = 8;
     private static final int POOL_SIZE = 10000;
-    private static final int TEST_DURATION_SECONDS = 30; // 30 секунд для тестирования
+    private static final int TEST_DURATION_SECONDS = 300; // 30 секунд для тестирования
     private static final int OPERATIONS_PER_ITERATION = 1000;
     private static final int PAYLOAD_SIZE = 4096; // 1KB на объект
     
@@ -53,6 +53,18 @@ public class GCMemoryTest {
 
         
         // Запускаем тесты
+        Object pool5 = new BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
+        testUltraVarHandleStripedOffHeapAutoExpandPool("BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand", (BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool5);        
+        
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool5);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
         Object pool1 = new BitmaskRingBufferUltraVarHandle<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
         testUltraVarHandlePool("BitmaskRingBufferUltraVarHandle", (BitmaskRingBufferUltraVarHandle<HeavyTask>) pool1);
 
@@ -70,18 +82,6 @@ public class GCMemoryTest {
         
         // Cleanup и принудительная сборка мусора между тестами
         cleanupPool(pool4);
-        System.gc();
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-        }
-
-        Object pool5 = new BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
-        testUltraVarHandleStripedOffHeapAutoExpandPool("BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand", (BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool5);        
-        
-        // Cleanup и принудительная сборка мусора между тестами
-        cleanupPool(pool5);
         System.gc();
         try {
             Thread.sleep(2000);

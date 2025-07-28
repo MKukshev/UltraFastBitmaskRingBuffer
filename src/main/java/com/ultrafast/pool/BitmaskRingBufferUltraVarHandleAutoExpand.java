@@ -2,7 +2,6 @@ package com.ultrafast.pool;
 
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -81,15 +80,15 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
     private final double expansionPercentage; // Процент расширения (0.1 = 10%, 0.2 = 20%, etc.)
     private final int maxExpansionPercentage; // Максимальный процент расширения (100 = 100%)
     private volatile int currentCapacity;     // Текущая емкость пула
-    private volatile T[] objects;             // Массив объектов (основное хранилище)
+    private T[] objects;                      // Массив объектов (основное хранилище)
     
     // Map для O(1) поиска индекса объекта по ссылке
     // Это устраняет необходимость в O(n) линейном поиске в setFreeObject
-    private final ConcurrentHashMap<T, Integer> objectToIndex = new ConcurrentHashMap<>();
+    // private final ConcurrentHashMap<T, Integer> objectToIndex = new ConcurrentHashMap<>();
     
     // Off-heap битовые маски (используя VarHandle для доступа)
     // availabilityMask - отслеживает свободные/занятые объекты (1 = свободен, 0 = занят)
-    private volatile long[] availabilityMask;  // Битовое поле доступности объектов
+    private long[] availabilityMask;           // Битовое поле доступности объектов
     
     // Количество long значений, необходимых для хранения всех битов
     // Каждый long содержит 64 бита, поэтому maskSize = (capacity + 63) / 64
@@ -100,7 +99,7 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
     
     // Lock-free stack для кэширования индексов свободных слотов (используя VarHandle)
     // Это критическая оптимизация для быстрого доступа к недавно освобожденным объектам
-    private volatile int[] freeSlotStack;           // Стек индексов свободных слотов
+    private int[] freeSlotStack;                    // Стек индексов свободных слотов
     private final AtomicInteger stackTop = new AtomicInteger(-1);  // Вершина стека
     private volatile int stackSize;                 // Размер стека
     
@@ -198,7 +197,6 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
         this.objects = (T[]) new Object[currentCapacity];
         for (int i = 0; i < currentCapacity; i++) {
             objects[i] = objectFactory.createObject();
-            objectToIndex.put(objects[i], i); // Заполняем map
         }
         
         // ИНИЦИАЛИЗАЦИЯ: помечаем все объекты как доступные и добавляем в stack
@@ -259,7 +257,6 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
         // Создаем новые объекты
         for (int i = oldCapacity; i < newCapacity; i++) {
             newObjects[i] = objectFactory.createObject();
-            objectToIndex.put(newObjects[i], i);
         }
         
         // Обновляем ссылки
@@ -392,8 +389,14 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
             return false;
         }
         
-        // O(1) поиск индекса объекта через Map
-        Integer index = objectToIndex.get(object);
+        // O(n) поиск индекса объекта в массиве
+        Integer index = null;
+        for (int i = 0; i < currentCapacity; i++) {
+            if (objects[i] == object) {
+                index = i;
+                break;
+            }
+        }
         
         if (index == null) {
             return false; // Объект не найден в пуле
@@ -701,7 +704,7 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
      */
     public void cleanup() {
         // Очищаем Map для быстрого поиска объектов
-        objectToIndex.clear();
+        // objectToIndex.clear();
         
         // Очищаем массивы объектов для ускорения GC
         if (objects != null) {

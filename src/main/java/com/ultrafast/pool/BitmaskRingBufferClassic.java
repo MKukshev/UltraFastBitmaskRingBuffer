@@ -165,9 +165,9 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
      * @param obj объект для возврата
      */
     @Override
-    public void release(T obj) {
+    public boolean release(T obj) {
         if (obj == null) {
-            return;
+            return false;
         }
         
         // Атомарно удаляем из трекинга
@@ -181,7 +181,9 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
             if (metadata.isCreated) {
                 activeObjects.decrementAndGet();
             }
+            return true;
         }
+        return false;
     }
     
     /**
@@ -216,11 +218,41 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
     }
     
     /**
+     * Получение текущей емкости пула
+     * 
+     * @return емкость пула
+     */
+    @Override
+    public int getCapacity() {
+        return maxPoolSize;
+    }
+    
+    /**
+     * Получает свободный объект из пула (алиас для acquire)
+     * 
+     * @return свободный объект
+     */
+    @Override
+    public T getFreeObject() {
+        return acquire();
+    }
+    
+    /**
+     * Возвращает объект в пул (алиас для release)
+     * 
+     * @param object объект для возврата
+     * @return true если объект успешно возвращен
+     */
+    @Override
+    public boolean setFreeObject(T object) {
+        return release(object);
+    }
+    
+    /**
      * Получение статистики пула
      * 
      * @return статистика пула
      */
-    @Override
     public ObjectPool.PoolStatistics getStatistics() {
         return new ObjectPool.PoolStatistics(
             maxPoolSize,
@@ -239,7 +271,6 @@ public class BitmaskRingBufferClassic<T> implements ObjectPool<T> {
      * 
      * В классической реализации просто очищаем коллекции
      */
-    @Override
     public void close() {
         availableQueue.clear();
         borrowedObjects.clear();
