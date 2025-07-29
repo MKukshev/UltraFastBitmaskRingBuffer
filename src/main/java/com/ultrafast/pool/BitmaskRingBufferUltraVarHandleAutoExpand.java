@@ -36,7 +36,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * 
  * @param <T> Тип объектов в пуле
  */
-public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
+public class BitmaskRingBufferUltraVarHandleAutoExpand<T> implements ObjectPool<T> {
     
     // VarHandle для атомарного доступа к off-heap памяти (замена Unsafe)
     // LONG_ARRAY_HANDLE - для работы с битовыми масками (long[])
@@ -450,6 +450,18 @@ public class BitmaskRingBufferUltraVarHandleAutoExpand<T> {
             totalGets.get(), totalReturns.get(),
             bitTrickHits.get(), stackHits.get(), autoExpansionHits.get(), totalExpansions.get(),
             expansionPercentage, maxExpansionPercentage, getMaxAllowedCapacity()
+        );
+    }
+    
+    @Override
+    public PoolStatistics getStatistics() {
+        PoolStats stats = getStats();
+        return new PoolStatistics(
+            stats.capacity,
+            stats.busyCount,
+            stats.totalGets,
+            stats.totalReturns,
+            0 // totalWaits - не отслеживаем в этой реализации
         );
     }
     

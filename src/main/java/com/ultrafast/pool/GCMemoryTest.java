@@ -10,6 +10,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.ultrafast.pool.smart.SmartTaskPool;
+
 /**
  * Тест для измерения разницы в аллокациях объектов GC между различными реализациями пулов
  * 
@@ -30,8 +32,8 @@ import java.util.concurrent.atomic.AtomicLong;
 public class GCMemoryTest {
     
     private static final int THREAD_COUNT = 8;
-    private static final int POOL_SIZE = 10000;
-    private static final int TEST_DURATION_SECONDS = 300; // 30 секунд для тестирования
+    private static final int POOL_SIZE = 100000;
+    private static final int TEST_DURATION_SECONDS = 180; // 30 секунд для тестирования
     private static final int OPERATIONS_PER_ITERATION = 1000;
     private static final int PAYLOAD_SIZE = 4096; // 1KB на объект
     
@@ -116,6 +118,30 @@ public class GCMemoryTest {
         Object pool2 = new BitmaskRingBufferUltraVarHandleStriped<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0));
         testUltraVarHandleStripedPool("BitmaskRingBufferUltraVarHandleStriped", (BitmaskRingBufferUltraVarHandleStriped<HeavyTask>) pool2);
         
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(pool2);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+
+        // Тест SmartTaskPool
+        SmartTaskPool<HeavyTask> smartPool = new SmartTaskPool<>(
+            new BitmaskRingBufferUltraVarHandleAutoExpand<>(POOL_SIZE, () -> new HeavyTask(0, "Test", PAYLOAD_SIZE, 42.0)),
+            Executors.newFixedThreadPool(THREAD_COUNT)
+        );
+        testSmartTaskPool("SmartTaskPool", smartPool);
+        
+        // Cleanup и принудительная сборка мусора между тестами
+        cleanupPool(smartPool);
+        System.gc();
+        try {
+            Thread.sleep(2000);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
     
     /**
@@ -132,6 +158,8 @@ public class GCMemoryTest {
             ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<?>) pool).cleanup();
         } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
             ((BitmaskRingBufferUltraVarHandleAutoExpand<?>) pool).cleanup();
+        } else if (pool instanceof SmartTaskPool) {
+            ((SmartTaskPool<?>) pool).shutdown();
         }
         // ObjectPool не требует cleanup
     }
@@ -157,6 +185,10 @@ public class GCMemoryTest {
     }
     
     private static void testUltraVarHandleAutoExpandPool(String poolName, BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask> pool) {
+        testPool(poolName, pool, false);
+    }
+
+    private static void testSmartTaskPool(String poolName, SmartTaskPool<HeavyTask> pool) {
         testPool(poolName, pool, false);
     }
     
@@ -208,6 +240,8 @@ public class GCMemoryTest {
                                 task = ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool).getFreeObject();
                             } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
                                 task = ((BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool).getFreeObject();
+                            } else if (pool instanceof SmartTaskPool) {
+                                task = ((SmartTaskPool<HeavyTask>) pool).getPool().getFreeObject();
                             } else {
                                 task = ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).getFreeObject();
                             }
@@ -234,6 +268,8 @@ public class GCMemoryTest {
                                     ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<HeavyTask>) pool).setFreeObject(task);
                                 } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
                                     ((BitmaskRingBufferUltraVarHandleAutoExpand<HeavyTask>) pool).setFreeObject(task);
+                                } else if (pool instanceof SmartTaskPool) {
+                                    ((SmartTaskPool<HeavyTask>) pool).getPool().setFreeObject(task);
                                 } else {
                                     ((BitmaskRingBufferUltraVarHandle<HeavyTask>) pool).setFreeObject(task);
                                 }

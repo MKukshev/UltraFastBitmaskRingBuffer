@@ -6,6 +6,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
+import com.ultrafast.pool.smart.SmartTaskPool;
+
 /**
  * Benchmark to compare performance of different BitmaskRingBuffer implementations:
  * - Original (AtomicReferenceArray)
@@ -19,6 +21,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * - UltraVarHandleStriped (Striped tail, extended padding, thread-local optimizations)
  * - UltraVarHandleStripedOffHeapAutoExpand (Auto-expanding version with off-heap storage)
  * - UltraVarHandleAutoExpand (Auto-expanding version based on UltraVarHandle)
+ * - SmartTaskPool (High-level wrapper with task execution capabilities)
  */
 public class OffHeapBenchmark {
     
@@ -55,7 +58,6 @@ public class OffHeapBenchmark {
                 benchmarkVersion("Off-Heap", poolSize, threadCount, 
                     () -> new BitmaskRingBufferOffHeap<>(poolSize, () -> new ProcessTask("Task")));
                 
-                
                 // Benchmark ultra+varhandle version (Unsafe replacement)
                 benchmarkVersion("UltraVarHandle", poolSize, threadCount, 
                     () -> new BitmaskRingBufferUltraVarHandle<>(poolSize, () -> new ProcessTask("Task")));
@@ -79,6 +81,13 @@ public class OffHeapBenchmark {
                 // Benchmark classic version (ConcurrentLinkedQueue + ConcurrentHashMap)
                 benchmarkVersion("Classic", poolSize, threadCount, 
                     () -> new BitmaskRingBufferClassic<>(() -> new ProcessTask("Task"), poolSize/2, poolSize, 1000));
+                
+                // Benchmark SmartTaskPool version (High-level wrapper)
+                benchmarkVersion("SmartTaskPool", poolSize, threadCount, 
+                    () -> new SmartTaskPool<>(
+                        new BitmaskRingBufferUltraVarHandleAutoExpand<>(poolSize, () -> new ProcessTask("Task")),
+                        Executors.newFixedThreadPool(threadCount)
+                    ));
                 
                 System.out.println();
             }
@@ -115,21 +124,23 @@ public class OffHeapBenchmark {
                     ((BitmaskRingBufferMinimal<?>) pool).cleanup();
                 } else if (pool instanceof BitmaskRingBufferOffHeapStack) {
                     ((BitmaskRingBufferOffHeapStack<?>) pool).cleanup();
-                        } else if (pool instanceof BitmaskRingBufferUltraStack) {
-            ((BitmaskRingBufferUltraStack<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
-            ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
-            ((BitmaskRingBufferUltraVarHandleOptimized<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
-            ((BitmaskRingBufferUltraVarHandleStriped<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
-            ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
-            ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<?>) pool).cleanup();
-        } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
-            ((BitmaskRingBufferUltraVarHandleAutoExpand<?>) pool).cleanup();
-        }
+                } else if (pool instanceof BitmaskRingBufferUltraStack) {
+                    ((BitmaskRingBufferUltraStack<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandle) {
+                    ((BitmaskRingBufferUltraVarHandle<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandleOptimized) {
+                    ((BitmaskRingBufferUltraVarHandleOptimized<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandleStriped) {
+                    ((BitmaskRingBufferUltraVarHandleStriped<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeap) {
+                    ((BitmaskRingBufferUltraVarHandleStripedOffHeap<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand) {
+                    ((BitmaskRingBufferUltraVarHandleStripedOffHeapAutoExpand<?>) pool).cleanup();
+                } else if (pool instanceof BitmaskRingBufferUltraVarHandleAutoExpand) {
+                    ((BitmaskRingBufferUltraVarHandleAutoExpand<?>) pool).cleanup();
+                } else if (pool instanceof SmartTaskPool) {
+                    ((SmartTaskPool<?>) pool).shutdown();
+                }
             }
             
             double avgTimeMs = totalTime / (double) BENCHMARK_ITERATIONS / 1_000_000;
@@ -211,6 +222,9 @@ public class OffHeapBenchmark {
             return ((BitmaskRingBufferUltraVarHandleAutoExpand<Object>) pool).getFreeObject();
         } else if (pool instanceof BitmaskRingBufferClassic) {
             return ((BitmaskRingBufferClassic<Object>) pool).acquire();
+        } else if (pool instanceof SmartTaskPool) {
+            // Для SmartTaskPool используем базовый пул
+            return ((SmartTaskPool<Object>) pool).getPool().getFreeObject();
         }
         return null;
     }
@@ -249,6 +263,9 @@ public class OffHeapBenchmark {
             ((BitmaskRingBufferUltraVarHandleAutoExpand<Object>) pool).setFreeObject(obj);
         } else if (pool instanceof BitmaskRingBufferClassic) {
             ((BitmaskRingBufferClassic<Object>) pool).release(obj);
+        } else if (pool instanceof SmartTaskPool) {
+            // Для SmartTaskPool используем базовый пул
+            ((SmartTaskPool<Object>) pool).getPool().setFreeObject(obj);
         }
     }
     
